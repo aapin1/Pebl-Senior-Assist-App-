@@ -91,7 +91,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  void _nextPage() {
+  void _nextPage() async {
+    // Stop any ongoing TTS when navigating
+    await _flutterTts.stop();
+    setState(() {
+      _isPlaying = false;
+    });
+    
     if (_currentPage < _steps.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
@@ -102,7 +108,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  void _previousPage() {
+  void _previousPage() async {
+    // Stop any ongoing TTS when navigating
+    await _flutterTts.stop();
+    setState(() {
+      _isPlaying = false;
+    });
+    
     if (_currentPage > 0) {
       _pageController.previousPage(
         duration: const Duration(milliseconds: 300),
@@ -111,7 +123,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  void _completeOnboarding() {
+  void _completeOnboarding() async {
+    // Stop any ongoing TTS before navigating
+    await _flutterTts.stop();
+    
     if (widget.returnToHome) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
@@ -127,7 +142,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  void _skipOnboarding() {
+  void _skipOnboarding() async {
+    // Stop any ongoing TTS before navigating
+    await _flutterTts.stop();
+    
     _accessibilityService.completeOnboarding();
     if (widget.returnToHome) {
       Navigator.of(context).pushReplacement(
@@ -200,9 +218,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
-                onPageChanged: (index) {
+                onPageChanged: (index) async {
+                  // Stop any ongoing TTS when page changes
+                  await _flutterTts.stop();
                   setState(() {
                     _currentPage = index;
+                    _isPlaying = false;
                   });
                 },
                 itemCount: _steps.length,

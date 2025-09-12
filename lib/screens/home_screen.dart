@@ -202,7 +202,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// Clear all text and responses
-  void _clearAll() {
+  void _clearAll() async {
+    // Stop any ongoing TTS when clearing
+    await _flutterTts.stop();
+    
     setState(() {
       _transcribedText = '';
       _aiResponse = '';
@@ -210,6 +213,13 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+
+  @override
+  void dispose() {
+    // Stop TTS when disposing of the widget
+    _flutterTts.stop();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -227,7 +237,11 @@ class _HomeScreenState extends State<HomeScreen> {
             actions: [
               IconButton(
                 icon: const Icon(Icons.help_outline, size: 32),
-                onPressed: () => _showHelpDialog(),
+                onPressed: () async {
+                  // Stop any ongoing TTS before showing dialog
+                  await _flutterTts.stop();
+                  _showHelpDialog();
+                },
                 tooltip: 'Help - Options',
               ),
             ],
@@ -508,7 +522,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () {
+              onPressed: () async {
+                // Stop any ongoing TTS before navigating
+                await _flutterTts.stop();
                 Navigator.of(context).pop();
                 Navigator.push(
                   context,
@@ -524,7 +540,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             TextButton(
-              onPressed: () {
+              onPressed: () async {
+                // Stop any ongoing TTS before navigating
+                await _flutterTts.stop();
                 Navigator.of(context).pop();
                 Navigator.push(
                   context,

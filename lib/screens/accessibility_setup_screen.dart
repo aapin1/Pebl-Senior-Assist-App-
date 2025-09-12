@@ -22,8 +22,6 @@ class _AccessibilitySetupScreenState extends State<AccessibilitySetupScreen> {
   
   // User responses
   double _selectedTextSize = 1.0;
-  bool _hasVisionIssues = false;
-  bool _hasColorBlindness = false;
   bool _wantsAudioPlayback = true;
 
   final List<SetupStep> _steps = [
@@ -36,16 +34,6 @@ class _AccessibilitySetupScreenState extends State<AccessibilitySetupScreen> {
       title: "Text Size",
       description: "What text size is most comfortable for you to read?",
       audioText: "What text size is most comfortable for you to read?",
-    ),
-    SetupStep(
-      title: "Vision Support",
-      description: "Do you have any vision difficulties that might make it hard to see text or colors clearly?",
-      audioText: "Do you have any vision difficulties that might make it hard to see text or colors clearly?",
-    ),
-    SetupStep(
-      title: "Color Vision",
-      description: "Do you have difficulty distinguishing between certain colors, like red and green?",
-      audioText: "Do you have difficulty distinguishing between certain colors, like red and green?",
     ),
     SetupStep(
       title: "Audio Preferences",
@@ -84,7 +72,13 @@ class _AccessibilitySetupScreenState extends State<AccessibilitySetupScreen> {
     }
   }
 
-  void _nextPage() {
+  void _nextPage() async {
+    // Stop any ongoing TTS when navigating
+    await _flutterTts.stop();
+    setState(() {
+      _isPlaying = false;
+    });
+    
     if (_currentPage < _steps.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
@@ -95,7 +89,13 @@ class _AccessibilitySetupScreenState extends State<AccessibilitySetupScreen> {
     }
   }
 
-  void _previousPage() {
+  void _previousPage() async {
+    // Stop any ongoing TTS when navigating
+    await _flutterTts.stop();
+    setState(() {
+      _isPlaying = false;
+    });
+    
     if (_currentPage > 0) {
       _pageController.previousPage(
         duration: const Duration(milliseconds: 300),
@@ -105,10 +105,11 @@ class _AccessibilitySetupScreenState extends State<AccessibilitySetupScreen> {
   }
 
   void _completeSetup() async {
+    // Stop any ongoing TTS before navigating
+    await _flutterTts.stop();
+    
     // Save all preferences
     await _accessibilityService.setTextSizeMultiplier(_selectedTextSize);
-    await _accessibilityService.setHighContrast(_hasVisionIssues);
-    await _accessibilityService.setColorBlindFriendly(_hasColorBlindness);
     await _accessibilityService.setAudioPlayback(_wantsAudioPlayback);
     await _accessibilityService.completeAccessibilitySetup();
 
@@ -370,7 +371,9 @@ class _AccessibilitySetupScreenState extends State<AccessibilitySetupScreen> {
                   const SizedBox(width: 10),
                   if (_currentPage > 0)
                     TextButton(
-                      onPressed: () {
+                      onPressed: () async {
+                        // Stop any ongoing TTS before navigating
+                        await _flutterTts.stop();
                         _accessibilityService.completeOnboarding();
                         _accessibilityService.completeAccessibilitySetup();
                         Navigator.of(context).pushReplacement(
@@ -404,9 +407,12 @@ class _AccessibilitySetupScreenState extends State<AccessibilitySetupScreen> {
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
-                onPageChanged: (index) {
+                onPageChanged: (index) async {
+                  // Stop any ongoing TTS when page changes
+                  await _flutterTts.stop();
                   setState(() {
                     _currentPage = index;
+                    _isPlaying = false;
                   });
                 },
                 itemCount: _steps.length,
@@ -419,22 +425,6 @@ class _AccessibilitySetupScreenState extends State<AccessibilitySetupScreen> {
                     case 2:
                       return _buildYesNoPage(
                         2,
-                        _hasVisionIssues,
-                        (value) => setState(() => _hasVisionIssues = value),
-                        Icons.visibility,
-                        Colors.orange.shade600,
-                      );
-                    case 3:
-                      return _buildYesNoPage(
-                        3,
-                        _hasColorBlindness,
-                        (value) => setState(() => _hasColorBlindness = value),
-                        Icons.palette,
-                        Colors.purple.shade600,
-                      );
-                    case 4:
-                      return _buildYesNoPage(
-                        4,
                         _wantsAudioPlayback,
                         (value) => setState(() => _wantsAudioPlayback = value),
                         Icons.volume_up,

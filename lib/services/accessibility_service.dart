@@ -10,8 +10,6 @@ class AccessibilityService extends ChangeNotifier {
 
   // Default values
   double _textSizeMultiplier = 1.0;
-  bool _highContrast = false;
-  bool _colorBlindFriendly = false;
   bool _audioPlayback = true;
   bool _hasCompletedOnboarding = false;
   bool _hasCompletedAccessibilitySetup = false;
@@ -19,8 +17,6 @@ class AccessibilityService extends ChangeNotifier {
 
   // Getters
   double get textSizeMultiplier => _textSizeMultiplier;
-  bool get highContrast => _highContrast;
-  bool get colorBlindFriendly => _colorBlindFriendly;
   bool get audioPlayback => _audioPlayback;
   bool get hasCompletedOnboarding => _hasCompletedOnboarding;
   bool get hasCompletedAccessibilitySetup => _hasCompletedAccessibilitySetup;
@@ -34,8 +30,6 @@ class AccessibilityService extends ChangeNotifier {
 
   // Keys for SharedPreferences
   static const String _textSizeKey = 'text_size_multiplier';
-  static const String _highContrastKey = 'high_contrast';
-  static const String _colorBlindKey = 'color_blind_friendly';
   static const String _audioPlaybackKey = 'audio_playback';
   static const String _onboardingKey = 'completed_onboarding';
   static const String _accessibilitySetupKey = 'completed_accessibility_setup';
@@ -45,8 +39,6 @@ class AccessibilityService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     
     _textSizeMultiplier = prefs.getDouble(_textSizeKey) ?? 1.0;
-    _highContrast = prefs.getBool(_highContrastKey) ?? false;
-    _colorBlindFriendly = prefs.getBool(_colorBlindKey) ?? false;
     _audioPlayback = prefs.getBool(_audioPlaybackKey) ?? true;
     _hasCompletedOnboarding = prefs.getBool(_onboardingKey) ?? false;
     _hasCompletedAccessibilitySetup = prefs.getBool(_accessibilitySetupKey) ?? false;
@@ -62,21 +54,6 @@ class AccessibilityService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Toggle high contrast mode
-  Future<void> setHighContrast(bool enabled) async {
-    _highContrast = enabled;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_highContrastKey, enabled);
-    notifyListeners();
-  }
-
-  /// Toggle color blind friendly mode
-  Future<void> setColorBlindFriendly(bool enabled) async {
-    _colorBlindFriendly = enabled;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_colorBlindKey, enabled);
-    notifyListeners();
-  }
 
   /// Toggle audio playback
   Future<void> setAudioPlayback(bool enabled) async {
@@ -112,42 +89,16 @@ class AccessibilityService extends ChangeNotifier {
 
   /// Get theme colors based on accessibility settings
   ColorScheme getColorScheme(Brightness brightness) {
-    if (_colorBlindFriendly) {
-      // Use color blind friendly palette
-      return ColorScheme.fromSeed(
-        seedColor: const Color(0xFF2E7D32), // Green that works for most color blindness
-        brightness: brightness,
-      ).copyWith(
-        primary: _highContrast ? Colors.black : const Color(0xFF2E7D32),
-        onPrimary: _highContrast ? Colors.white : Colors.white,
-        surface: _highContrast ? Colors.white : Colors.grey.shade50,
-        onSurface: _highContrast ? Colors.black : Colors.black87,
-        secondary: const Color(0xFF1976D2), // Blue that works for color blindness
-      );
-    } else if (_highContrast) {
-      // High contrast black and white
-      return ColorScheme.fromSeed(
-        seedColor: Colors.black,
-        brightness: brightness,
-      ).copyWith(
-        primary: Colors.black,
-        onPrimary: Colors.white,
-        surface: Colors.white,
-        onSurface: Colors.black,
-        secondary: Colors.grey.shade800,
-      );
-    } else {
-      // Default theme
-      return ColorScheme.fromSeed(
-        seedColor: Colors.blue,
-        brightness: brightness,
-      ).copyWith(
-        primary: Colors.blue.shade700,
-        onPrimary: Colors.white,
-        surface: Colors.white,
-        onSurface: Colors.black87,
-      );
-    }
+    // Default theme
+    return ColorScheme.fromSeed(
+      seedColor: Colors.blue,
+      brightness: brightness,
+    ).copyWith(
+      primary: Colors.blue.shade700,
+      onPrimary: Colors.white,
+      surface: Colors.white,
+      onSurface: Colors.black87,
+    );
   }
 
   /// Get text theme with accessibility adjustments
@@ -156,25 +107,25 @@ class AccessibilityService extends ChangeNotifier {
       headlineLarge: TextStyle(
         fontSize: 32 * _textSizeMultiplier,
         fontWeight: FontWeight.bold,
-        color: _highContrast ? Colors.black : Colors.black87,
+        color: Colors.black87,
       ),
       headlineMedium: TextStyle(
         fontSize: 28 * _textSizeMultiplier,
         fontWeight: FontWeight.bold,
-        color: _highContrast ? Colors.black : Colors.black87,
+        color: Colors.black87,
       ),
       bodyLarge: TextStyle(
         fontSize: 20 * _textSizeMultiplier,
-        color: _highContrast ? Colors.black : Colors.black87,
+        color: Colors.black87,
       ),
       bodyMedium: TextStyle(
         fontSize: 18 * _textSizeMultiplier,
-        color: _highContrast ? Colors.black : Colors.black87,
+        color: Colors.black87,
       ),
       labelLarge: TextStyle(
         fontSize: 16 * _textSizeMultiplier,
         fontWeight: FontWeight.w500,
-        color: _highContrast ? Colors.black : Colors.black87,
+        color: Colors.black87,
       ),
     );
   }
