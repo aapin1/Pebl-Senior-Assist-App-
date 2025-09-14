@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import '../widgets/microphone_button.dart';
+import '../widgets/interactive_learning_card.dart';
 import '../services/ai_service.dart';
 import '../services/accessibility_service.dart';
 import 'onboarding_screen.dart';
@@ -38,8 +39,11 @@ class _HomeScreenState extends State<HomeScreen> {
   // Store the transcribed text
   String _transcribedText = '';
   
-  // Store AI response
-  String _aiResponse = '';
+  // Store AI learning steps
+  List<LearningStep> _learningSteps = [];
+  
+  // Track if learning is active
+  bool _isLearningActive = false;
   
   // Conversation history for context
   List<Map<String, String>> _conversationHistory = [];
@@ -162,11 +166,12 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  /// Process user query with AI and speak the response
+  /// Process user query with AI and get interactive learning steps
   Future<void> _processWithAI(String userQuery) async {
     setState(() {
       _isProcessing = true;
-      _aiResponse = 'Let me help you with that...';
+      _learningSteps = [];
+      _isLearningActive = false;
     });
 
     try {
@@ -176,27 +181,35 @@ class _HomeScreenState extends State<HomeScreen> {
         'content': userQuery,
       });
 
-      final response = await _aiService.getSeniorTechSupportWithHistory(userQuery, _conversationHistory);
+      final steps = await _aiService.getSeniorTechSupportStepsWithHistory(userQuery, _conversationHistory);
       
-      // Add AI response to conversation history
+      // Add AI response to conversation history (using first step content as summary)
       _conversationHistory.add({
         'role': 'assistant',
-        'content': response,
+        'content': steps.isNotEmpty ? steps.first.content : 'I provided step-by-step help.',
       });
 
       setState(() {
-        _aiResponse = response;
+        _learningSteps = steps;
         _isProcessing = false;
+        _isLearningActive = steps.isNotEmpty;
       });
       
-      // Speak the AI response for accessibility (only if user wants audio)
-      if (_accessibilityService.audioPlayback) {
-        await _flutterTts.speak(response);
+      // Speak the first step for accessibility (only if user wants audio)
+      if (_accessibilityService.audioPlayback && steps.isNotEmpty) {
+        await _flutterTts.speak('${steps.first.title}. ${steps.first.content}');
       }
     } catch (e) {
       setState(() {
-        _aiResponse = 'I\'m having trouble right now. Please try again.';
+        _learningSteps = [
+          LearningStep(
+            title: 'Error',
+            content: 'I\'m having trouble right now. Please try again.',
+            requiresConfirmation: true,
+          )
+        ];
         _isProcessing = false;
+        _isLearningActive = true;
       });
     }
   }
@@ -208,9 +221,24 @@ class _HomeScreenState extends State<HomeScreen> {
     
     setState(() {
       _transcribedText = '';
-      _aiResponse = '';
+      _learningSteps = [];
+      _isLearningActive = false;
       _conversationHistory.clear(); // Reset conversation history
     });
+  }
+  
+  /// Handle completion of interactive learning
+  void _onLearningComplete(bool completed) async {
+    // Stop any ongoing TTS
+    await _flutterTts.stop();
+    
+    setState(() {
+      _isLearningActive = false;
+    });
+    
+    if (_accessibilityService.audioPlayback && completed) {
+      await _flutterTts.speak('Great job! You completed the tutorial. Feel free to ask me another question.');
+    }
   }
 
 
@@ -398,73 +426,58 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                     
-                    // AI Response display
-                    if (_aiResponse.isNotEmpty)
+                    // Interactive Learning Card display
+                    if (_isProcessing)
                       const SizedBox(height: 20),
-                    if (_aiResponse.isNotEmpty)
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 20,
+                    if (_isProcessing)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(24),
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Colors.orange.shade300,
+                            width: 2,
                           ),
-                          decoration: BoxDecoration(
-                            color: _isProcessing ? Colors.orange.shade50 : Colors.green.shade50,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: _isProcessing ? Colors.orange.shade300 : Colors.green.shade300,
-                              width: 2,
+                        ),
+                        child: Column(
+                          children: [
+                            CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.orange.shade600),
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Creating your personalized learning steps...',
+                              style: TextStyle(
+                                fontSize: 16 * _accessibilityService.textSizeMultiplier,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.orange.shade700,
                               ),
-                            ],
-                          ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            _isProcessing ? Icons.hourglass_empty : Icons.assistant,
-                            color: _isProcessing ? Colors.orange.shade600 : Colors.green.shade600,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            _isProcessing ? 'Thinking...' : 'AI Assistant:',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontSize: 16 * _accessibilityService.textSizeMultiplier,
-                              fontWeight: FontWeight.bold,
-                              color: _isProcessing ? Colors.orange.shade600 : Colors.green.shade600,
+                              textAlign: TextAlign.center,
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        _aiResponse,
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontSize: 18 * _accessibilityService.textSizeMultiplier,
-                          fontWeight: FontWeight.w400,
-                          color: Colors.black87,
-                          height: 1.4,
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
+                    
+                    // Interactive Learning Steps
+                    if (_isLearningActive && _learningSteps.isNotEmpty)
+                      const SizedBox(height: 20),
+                    if (_isLearningActive && _learningSteps.isNotEmpty)
+                      InteractiveLearningCard(
+                        steps: _learningSteps,
+                        onComplete: _onLearningComplete,
+                        accessibilityService: _accessibilityService,
+                      ),
                     
                     const SizedBox(height: 40),
                     
                     
                     // Clear button when there's content
-                    if ((_transcribedText.isNotEmpty || _aiResponse.isNotEmpty) && !_isListening && !_isProcessing)
+                    if ((_transcribedText.isNotEmpty || _isLearningActive) && !_isListening && !_isProcessing)
                       const SizedBox(height: 20),
-                    if ((_transcribedText.isNotEmpty || _aiResponse.isNotEmpty) && !_isListening && !_isProcessing)
+                    if ((_transcribedText.isNotEmpty || _isLearningActive) && !_isListening && !_isProcessing)
                         Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
