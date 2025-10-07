@@ -29,7 +29,7 @@ class MicrophoneButton extends StatelessWidget {
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.2),
+              color: Colors.blue.shade100.withOpacity(0.3),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),

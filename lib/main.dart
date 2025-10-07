@@ -3,8 +3,9 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/home_screen.dart';
 import 'screens/welcome_screen.dart';
 import 'services/accessibility_service.dart';
+import 'services/ad_service.dart';
 
-/// Main entry point of the Senior Assist application
+/// Main entry point of the Pebl application
 /// This app is designed with accessibility in mind for senior users
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,19 +13,19 @@ void main() async {
   // Load environment variables
   await dotenv.load(fileName: ".env");
   
-  runApp(const SeniorAssistApp());
+  runApp(const PeblApp());
 }
 
-/// Root widget of the Senior Assist application
+/// Root widget of the Pebl application
 /// Configures the overall app theme and navigation
-class SeniorAssistApp extends StatefulWidget {
-  const SeniorAssistApp({super.key});
+class PeblApp extends StatefulWidget {
+  const PeblApp({super.key});
 
   @override
-  State<SeniorAssistApp> createState() => _SeniorAssistAppState();
+  State<PeblApp> createState() => _PeblAppState();
 }
 
-class _SeniorAssistAppState extends State<SeniorAssistApp> {
+class _PeblAppState extends State<PeblApp> {
   final AccessibilityService _accessibilityService = AccessibilityService();
   bool _isInitialized = false;
 
@@ -35,7 +36,12 @@ class _SeniorAssistAppState extends State<SeniorAssistApp> {
   }
 
   Future<void> _initializeApp() async {
+    // Initialize accessibility service first
     await _accessibilityService.initialize();
+    
+    // Initialize ad service for monetization
+    await AdService().initialize();
+    
     setState(() {
       _isInitialized = true;
     });
@@ -56,7 +62,7 @@ class _SeniorAssistAppState extends State<SeniorAssistApp> {
       animation: _accessibilityService,
       builder: (context, child) {
         return MaterialApp(
-          title: 'Senior Assist',
+          title: 'Pebl',
           debugShowCheckedModeBanner: false,
           
           // Dynamic theme based on accessibility settings
@@ -86,11 +92,8 @@ class _SeniorAssistAppState extends State<SeniorAssistApp> {
   }
 
   Widget _getInitialScreen() {
-    // Start with welcome screen for first-time users
-    // After setup is complete, users go directly to home screen
-    if (!_accessibilityService.hasCompletedAccessibilitySetup) {
-      return const WelcomeScreen();
-    }
+    // Go directly to home screen - no setup required
+    // Users can change settings anytime from the Settings button
     return const HomeScreen();
   }
 }

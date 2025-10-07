@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 import '../services/accessibility_service.dart';
+import '../services/ai_service.dart';
 
 /// Model for a learning step in the interactive system
 class LearningStep {
@@ -27,12 +30,14 @@ class InteractiveLearningCard extends StatefulWidget {
   final List<LearningStep> steps;
   final Function(bool completed) onComplete;
   final AccessibilityService accessibilityService;
+  final Function(String)? onStepRead;
 
   const InteractiveLearningCard({
     super.key,
     required this.steps,
     required this.onComplete,
     required this.accessibilityService,
+    this.onStepRead,
   });
 
   @override
@@ -52,6 +57,16 @@ class _InteractiveLearningCardState extends State<InteractiveLearningCard>
   String troubleshootingInput = '';
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+  
+  // Follow-up question functionality
+  final SpeechToText _speechToText = SpeechToText();
+  final AIService _aiService = AIService();
+  bool isListeningForFollowUp = false;
+  bool isProcessingFollowUp = false;
+  String followUpQuestion = '';
+  String followUpAnswer = '';
+  bool showFollowUpAnswer = false;
+  Timer? _speechTimeout;
 
   @override
   void initState() {
@@ -69,10 +84,22 @@ class _InteractiveLearningCardState extends State<InteractiveLearningCard>
   @override
   void dispose() {
     _animationController.dispose();
+    _speechTimeout?.cancel();
     super.dispose();
   }
 
-  void _nextStep() {
+  void _nextStep() async {
+    // Stop current audio before moving to next step
+    if (widget.onStepRead != null) {
+      widget.onStepRead!('');
+    }
+    
+    // Stop any active speech recognition and clear timers
+    _speechTimeout?.cancel();
+    if (_speechToText.isListening) {
+      await _speechToText.stop();
+    }
+    
     if (currentStepIndex < widget.steps.length - 1) {
       setState(() {
         currentStepIndex++;
@@ -82,11 +109,140 @@ class _InteractiveLearningCardState extends State<InteractiveLearningCard>
         stepCompleted = false;
         showConfirmation = false;
         awaitingTroubleshooting = false;
+        showFollowUpAnswer = false;
+        followUpQuestion = '';
+        followUpAnswer = '';
+        isListeningForFollowUp = false;
+        isProcessingFollowUp = false;
       });
       _animationController.reset();
       _animationController.forward();
+      
+      // Start reading the new step if audio is enabled
+      if (widget.accessibilityService.isAudioEnabled && widget.onStepRead != null) {
+        final currentStep = widget.steps[currentStepIndex];
+        await Future.delayed(const Duration(milliseconds: 500));
+        widget.onStepRead!(currentStep.content);
+      }
     } else {
+      // Stop audio on completion
+      if (widget.onStepRead != null) {
+        widget.onStepRead!('');
+      }
       widget.onComplete(true);
+    }
+  }
+
+  void _startFollowUpListening() async {
+    if (!isListeningForFollowUp) {
+      // Stop current audio narration when starting Question feature
+      if (widget.onStepRead != null) {
+        widget.onStepRead!('');
+      }
+      
+      setState(() {
+        isListeningForFollowUp = true;
+        followUpQuestion = 'Listening for your question...';
+      });
+
+      try {
+        bool available = await _speechToText.initialize();
+        if (available) {
+          // Start 7-second timeout
+          _speechTimeout = Timer(const Duration(seconds: 7), () {
+            if (isListeningForFollowUp && followUpQuestion.isNotEmpty && 
+                followUpQuestion != 'Listening for your question...') {
+              _processFollowUpQuestion(followUpQuestion);
+            } else {
+              _stopListening();
+            }
+          });
+          
+          await _speechToText.listen(
+            onResult: (result) {
+              setState(() {
+                followUpQuestion = result.recognizedWords;
+              });
+              
+              // Reset timeout on new words
+              _speechTimeout?.cancel();
+              if (result.recognizedWords.isNotEmpty) {
+                _speechTimeout = Timer(const Duration(seconds: 7), () {
+                  if (isListeningForFollowUp && result.recognizedWords.isNotEmpty) {
+                    _processFollowUpQuestion(result.recognizedWords);
+                  }
+                });
+              }
+              
+              if (result.finalResult && result.recognizedWords.isNotEmpty) {
+                _speechTimeout?.cancel();
+                _processFollowUpQuestion(result.recognizedWords);
+              }
+            },
+            listenOptions: SpeechListenOptions(
+              partialResults: true,
+              listenMode: ListenMode.confirmation,
+            ),
+            localeId: 'en_US',
+          );
+        }
+      } catch (e) {
+        setState(() {
+          followUpQuestion = 'Error starting speech recognition';
+          isListeningForFollowUp = false;
+        });
+      }
+    } else {
+      _stopListening();
+    }
+  }
+
+  void _stopListening() async {
+    _speechTimeout?.cancel();
+    await _speechToText.stop();
+    setState(() {
+      isListeningForFollowUp = false;
+    });
+  }
+
+  void _processFollowUpQuestion(String question) async {
+    _speechTimeout?.cancel();
+    setState(() {
+      isListeningForFollowUp = false;
+      isProcessingFollowUp = true;
+      followUpAnswer = 'Thinking about your question...';
+    });
+
+    try {
+      final currentStep = widget.steps[currentStepIndex];
+      final context = "Current step: ${currentStep.title}\nStep content: ${currentStep.content}\nUser's follow-up question: $question";
+      
+      final response = await _aiService.getFollowUpAnswer(context);
+      
+      setState(() {
+        followUpAnswer = response;
+        showFollowUpAnswer = true;
+        isProcessingFollowUp = false;
+      });
+      
+      // Read the follow-up answer aloud if audio is enabled
+      if (widget.accessibilityService.isAudioEnabled && widget.onStepRead != null) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        widget.onStepRead!(response);
+      }
+    } catch (e) {
+      final errorMessage = "Sorry, I couldn't process your question. Please try again.";
+      setState(() {
+        followUpAnswer = errorMessage;
+        showFollowUpAnswer = true;
+        isProcessingFollowUp = false;
+      });
+      
+      // Read the error message aloud if audio is enabled
+      if (widget.accessibilityService.isAudioEnabled && widget.onStepRead != null) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        widget.onStepRead!(errorMessage);
+      }
     }
   }
 
@@ -210,7 +366,7 @@ class _InteractiveLearningCardState extends State<InteractiveLearningCard>
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.blue.shade100.withOpacity(0.3),
                   blurRadius: 15,
                   offset: const Offset(0, 5),
                 ),
@@ -267,9 +423,9 @@ class _InteractiveLearningCardState extends State<InteractiveLearningCard>
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
+                    color: Colors.blue.shade50,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade200),
+                    border: Border.all(color: Colors.blue.shade200),
                   ),
                   child: Text(
                     currentStep.content,
@@ -303,11 +459,11 @@ class _InteractiveLearningCardState extends State<InteractiveLearningCard>
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              'Quick Check:',
+                              'Question:',
                               style: TextStyle(
                                 fontSize: 16 * widget.accessibilityService.textSizeMultiplier,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.orange.shade700,
+                                color: Colors.blue.shade700,
                               ),
                             ),
                           ],
@@ -608,38 +764,169 @@ class _InteractiveLearningCardState extends State<InteractiveLearningCard>
                     ),
                   ),
                 ] else if (!showConfirmation) ...[
-                  // Show continue button only when not in confirmation mode
-                  ElevatedButton.icon(
-                    onPressed: (currentStep.question != null && selectedAnswer == null)
-                        ? null
-                        : _showQuestionOrNext,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue.shade600,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  // Show continue and help buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _nextStep,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue.shade600,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          icon: Icon(
+                            currentStepIndex == widget.steps.length - 1
+                                ? Icons.check
+                                : Icons.arrow_forward,
+                          ),
+                          label: Flexible(
+                            child: Text(
+                              currentStepIndex == widget.steps.length - 1
+                                  ? 'Complete'
+                                  : 'Continue',
+                              style: TextStyle(
+                                fontSize: 13 * widget.accessibilityService.textSizeMultiplier,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              overflow: TextOverflow.visible,
+                              softWrap: true,
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                    icon: Icon(
-                      currentStepIndex == widget.steps.length - 1
-                          ? Icons.check
-                          : currentStep.question != null && !showQuestion
-                              ? Icons.quiz
-                              : Icons.arrow_forward,
-                    ),
-                    label: Text(
-                      currentStepIndex == widget.steps.length - 1
-                          ? 'Complete'
-                          : currentStep.question != null && !showQuestion
-                              ? 'Quick Check'
-                              : 'Continue',
-                      style: TextStyle(
-                        fontSize: 16 * widget.accessibilityService.textSizeMultiplier,
-                        fontWeight: FontWeight.w600,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _startFollowUpListening,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isListeningForFollowUp 
+                                ? Colors.red.shade600 
+                                : Colors.orange.shade600,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          icon: Icon(
+                            isListeningForFollowUp ? Icons.stop : Icons.help_outline,
+                          ),
+                          label: Text(
+                            isListeningForFollowUp ? 'Stop' : 'Question',
+                            style: TextStyle(
+                              fontSize: 14 * widget.accessibilityService.textSizeMultiplier,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.visible,
+                            softWrap: true,
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
+                  
+                  // Follow-up question display
+                  if (followUpQuestion.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Your Question:',
+                            style: TextStyle(
+                              fontSize: 14 * widget.accessibilityService.textSizeMultiplier,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue.shade700,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            followUpQuestion,
+                            style: TextStyle(
+                              fontSize: 14 * widget.accessibilityService.textSizeMultiplier,
+                              color: Colors.black87,
+                            ),
+                            softWrap: true,
+                            overflow: TextOverflow.visible,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  
+                  // Follow-up answer display
+                  if (showFollowUpAnswer && followUpAnswer.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.blue.shade200),
+                      ),
+                      child: Text(
+                        followUpAnswer,
+                        style: TextStyle(
+                          fontSize: 14 * widget.accessibilityService.textSizeMultiplier,
+                          color: Colors.black87,
+                        ),
+                        softWrap: true,
+                        overflow: TextOverflow.visible,
+                      ),
+                    ),
+                  ],
+                  
+                  // Processing indicator
+                  if (isProcessingFollowUp) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.orange.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.orange.shade600),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Thinking about your question...',
+                              style: TextStyle(
+                                fontSize: 14 * widget.accessibilityService.textSizeMultiplier,
+                                color: Colors.orange.shade700,
+                              ),
+                              softWrap: true,
+                              overflow: TextOverflow.visible,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
                 
               ],

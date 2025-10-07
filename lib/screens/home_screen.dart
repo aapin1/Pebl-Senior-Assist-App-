@@ -3,13 +3,15 @@ import 'package:speech_to_text/speech_to_text.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import '../widgets/microphone_button.dart';
 import '../widgets/interactive_learning_card.dart';
+import '../widgets/ad_disclaimer_dialog.dart';
 import '../services/ai_service.dart';
 import '../services/accessibility_service.dart';
-import 'onboarding_screen.dart';
+import 'demo_screen.dart';
 import 'accessibility_setup_screen.dart';
+import 'question_screen.dart';
 
-/// Home screen of the Senior Assist app
-/// Contains the main title and microphone button for voice interaction
+/// Home screen of the Pebl app
+/// Contains the main title and Ask a Question button
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -17,235 +19,17 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  // Speech recognition instance
-  final SpeechToText _speechToText = SpeechToText();
-  
-  // Text-to-speech instance
-  final FlutterTts _flutterTts = FlutterTts();
-  
-  // AI service instance
-  final AIService _aiService = AIService();
-  
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   // Accessibility service instance
   final AccessibilityService _accessibilityService = AccessibilityService();
-  
-  // Track whether the app is currently "listening"
-  bool _isListening = false;
-  
-  // Track if AI is processing
-  bool _isProcessing = false;
-  
-  // Store the transcribed text
-  String _transcribedText = '';
-  
-  // Store AI learning steps
-  List<LearningStep> _learningSteps = [];
-  
-  // Track if learning is active
-  bool _isLearningActive = false;
-  
-  // Conversation history for context
-  List<Map<String, String>> _conversationHistory = [];
-  
-  // Track if speech recognition is available
-  bool _speechEnabled = false;
 
   @override
   void initState() {
     super.initState();
-    _initSpeech();
-    _initTts();
   }
-
-  /// Initialize text-to-speech for AI responses
-  void _initTts() async {
-    await _flutterTts.setLanguage('en-US');
-    await _flutterTts.setSpeechRate(0.5); // Slower for seniors
-    await _flutterTts.setVolume(0.8);
-    await _flutterTts.setPitch(1.0);
-  }
-
-  /// Initialize speech recognition and request permissions
-  void _initSpeech() async {
-    // Initialize speech recognition first (this will trigger permission request)
-    _speechEnabled = await _speechToText.initialize(
-      onError: (error) {
-        setState(() {
-          _isListening = false;
-          _transcribedText = 'Error: ${error.errorMsg}';
-        });
-      },
-      onStatus: (status) {
-        if (status == 'done' || status == 'notListening') {
-          setState(() {
-            _isListening = false;
-          });
-        }
-      },
-    );
-    
-    if (!_speechEnabled) {
-      setState(() {
-        _transcribedText = 'Tap microphone to enable speech recognition';
-      });
-    }
-  }
-
-  /// Handles microphone button tap - starts/stops speech recognition
-  void _onMicrophoneTapped() async {
-    // Stop any ongoing TTS to prevent feedback loop
-    await _flutterTts.stop();
-    
-    // If speech recognition isn't enabled, try to initialize it again
-    if (!_speechEnabled) {
-      setState(() {
-        _transcribedText = 'Requesting microphone permission...';
-      });
-      
-      // Try to initialize speech recognition (this will prompt for permission)
-      _speechEnabled = await _speechToText.initialize(
-        onError: (error) {
-          setState(() {
-            _isListening = false;
-            _transcribedText = 'Permission denied or error: ${error.errorMsg}';
-          });
-        },
-        onStatus: (status) {
-          if (status == 'done' || status == 'notListening') {
-            setState(() {
-              _isListening = false;
-            });
-          }
-        },
-      );
-      
-      if (!_speechEnabled) {
-        setState(() {
-          _transcribedText = 'Please allow microphone access in Settings > Privacy & Security > Microphone > Senior Assist';
-        });
-        return;
-      } else {
-        setState(() {
-          _transcribedText = 'Permission granted! Tap microphone again to start listening.';
-        });
-        return;
-      }
-    }
-
-    if (_isListening) {
-      // Stop listening
-      await _speechToText.stop();
-      setState(() {
-        _isListening = false;
-      });
-    } else {
-      // Start listening
-      setState(() {
-        _isListening = true;
-        _transcribedText = 'Listening...';
-      });
-      
-      await _speechToText.listen(
-        onResult: (result) {
-          setState(() {
-            _transcribedText = result.recognizedWords;
-          });
-          
-          // If speech recognition is complete, process with AI
-          if (result.finalResult && result.recognizedWords.isNotEmpty) {
-            _processWithAI(result.recognizedWords);
-          }
-        },
-        listenFor: const Duration(seconds: 30), // Listen for up to 30 seconds
-        pauseFor: const Duration(seconds: 3), // Stop after 3 seconds of silence
-        partialResults: true, // Show results as user speaks
-        localeId: 'en_US', // English (US)
-        listenMode: ListenMode.confirmation, // More accurate for seniors
-      );
-    }
-  }
-
-  /// Process user query with AI and get interactive learning steps
-  Future<void> _processWithAI(String userQuery) async {
-    setState(() {
-      _isProcessing = true;
-      _learningSteps = [];
-      _isLearningActive = false;
-    });
-
-    try {
-      // Add user query to conversation history
-      _conversationHistory.add({
-        'role': 'user',
-        'content': userQuery,
-      });
-
-      final steps = await _aiService.getSeniorTechSupportStepsWithHistory(userQuery, _conversationHistory);
-      
-      // Add AI response to conversation history (using first step content as summary)
-      _conversationHistory.add({
-        'role': 'assistant',
-        'content': steps.isNotEmpty ? steps.first.content : 'I provided step-by-step help.',
-      });
-
-      setState(() {
-        _learningSteps = steps;
-        _isProcessing = false;
-        _isLearningActive = steps.isNotEmpty;
-      });
-      
-      // Speak the first step for accessibility (only if user wants audio)
-      if (_accessibilityService.audioPlayback && steps.isNotEmpty) {
-        await _flutterTts.speak('${steps.first.title}. ${steps.first.content}');
-      }
-    } catch (e) {
-      setState(() {
-        _learningSteps = [
-          LearningStep(
-            title: 'Error',
-            content: 'I\'m having trouble right now. Please try again.',
-            requiresConfirmation: true,
-          )
-        ];
-        _isProcessing = false;
-        _isLearningActive = true;
-      });
-    }
-  }
-
-  /// Clear all text and responses
-  void _clearAll() async {
-    // Stop any ongoing TTS when clearing
-    await _flutterTts.stop();
-    
-    setState(() {
-      _transcribedText = '';
-      _learningSteps = [];
-      _isLearningActive = false;
-      _conversationHistory.clear(); // Reset conversation history
-    });
-  }
-  
-  /// Handle completion of interactive learning
-  void _onLearningComplete(bool completed) async {
-    // Stop any ongoing TTS
-    await _flutterTts.stop();
-    
-    setState(() {
-      _isLearningActive = false;
-    });
-    
-    if (_accessibilityService.audioPlayback && completed) {
-      await _flutterTts.speak('Great job! You completed the tutorial. Feel free to ask me another question.');
-    }
-  }
-
 
   @override
   void dispose() {
-    // Stop TTS when disposing of the widget
-    _flutterTts.stop();
     super.dispose();
   }
 
@@ -255,328 +39,322 @@ class _HomeScreenState extends State<HomeScreen> {
       animation: _accessibilityService,
       builder: (context, child) {
         return Scaffold(
-          // Subtle gradient background for visual appeal
-          backgroundColor: Colors.grey.shade50,
-          
-          appBar: AppBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            automaticallyImplyLeading: false, // Remove back button
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.help_outline, size: 32),
-                onPressed: () async {
-                  // Stop any ongoing TTS before showing dialog
-                  await _flutterTts.stop();
-                  _showHelpDialog();
-                },
-                tooltip: 'Help - Options',
-              ),
-            ],
-          ),
-          
           body: Container(
+            height: MediaQuery.of(context).size.height,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
+                  Colors.blue.shade100,
                   Colors.blue.shade50,
                   Colors.white,
                   Colors.green.shade50,
+                  Colors.green.shade100,
                 ],
-                stops: const [0.0, 0.5, 1.0],
+                stops: const [0.0, 0.2, 0.5, 0.8, 1.0],
               ),
             ),
             child: SafeArea(
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      const SizedBox(height: 20),
-                      // Welcome card with app title
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(24.0),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const SizedBox(height: 10),
+                      // App icon with shadow
+                        Container(
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(30),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.blue.shade200.withOpacity(0.3),
+                                blurRadius: 20,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.smart_toy,
+                            size: 50,
+                            color: Colors.blue.shade600,
+                          ),
                         ),
-                        child: Column(
-                          children: [
+                      const SizedBox(height: 12),
+                      Text(
+                        'Pebl',
+                        style: TextStyle(
+                          fontSize: 28 * _accessibilityService.textSizeMultiplier,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade800,
+                          letterSpacing: 1.2,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      
+                      const SizedBox(height: 6),
+                      
+                      Text(
+                        'Your friendly tech helper',
+                        style: TextStyle(
+                          fontSize: 14 * _accessibilityService.textSizeMultiplier,
+                          color: Colors.blue.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Main Ask Question Button
+                      Expanded(
+                        flex: 3,
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16.0),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.95),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Colors.blue.shade300,
+                              width: 2,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.blue.shade200.withOpacity(0.3),
+                                blurRadius: 15,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: SingleChildScrollView(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
                             Icon(
-                              Icons.assistant,
-                              size: 48 * _accessibilityService.textSizeMultiplier,
+                              Icons.mic,
+                              size: 40,
                               color: Colors.blue.shade600,
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 10),
                             Text(
-                              'Senior Assist',
-                              style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                                fontSize: 36 * _accessibilityService.textSizeMultiplier,
+                              'Ask Me Anything!',
+                              style: TextStyle(
+                                fontSize: 18 * _accessibilityService.textSizeMultiplier,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.blue.shade800,
                               ),
                               textAlign: TextAlign.center,
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 6),
                             Text(
-                              'Your AI Assistant',
-                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                fontSize: 18 * _accessibilityService.textSizeMultiplier,
+                              'Get help with your phone, apps, or tech questions',
+                              style: TextStyle(
+                                fontSize: 12 * _accessibilityService.textSizeMultiplier,
                                 color: Colors.grey.shade600,
                               ),
                               textAlign: TextAlign.center,
+                              maxLines: 3,
+                              overflow: TextOverflow.visible,
                             ),
-                          ],
-                        ),
-                      ),
-                    
-                      const SizedBox(height: 40),
-                      
-                      // Microphone section with enhanced styling
-                      Container(
-                        padding: const EdgeInsets.all(20.0),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.8),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: Colors.blue.shade200,
-                            width: 2,
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            if (!_isListening && _transcribedText.isEmpty)
-                              Text(
-                                'Tap the microphone to start speaking',
-                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                  fontSize: 18 * _accessibilityService.textSizeMultiplier,
-                                  color: Colors.grey.shade700,
-                                  fontWeight: FontWeight.w500,
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: () async {
+                                  // Show disclaimer dialog EVERY time before entering question screen
+                                  await AdDisclaimerDialog.showAlways(
+                                    context: context,
+                                    accessibilityService: _accessibilityService,
+                                    onContinue: () {
+                                      // This callback is called AFTER user dismisses disclaimer
+                                      // OR immediately if disclaimer was already shown
+                                      if (context.mounted) {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => QuestionScreen(
+                                              accessibilityService: _accessibilityService,
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blue.shade600,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(15),
+                                  ),
+                                  elevation: 3,
                                 ),
-                                textAlign: TextAlign.center,
+                                icon: const Icon(Icons.help_outline, size: 24),
+                                label: Text(
+                                  'Ask a Question',
+                                  style: TextStyle(
+                                    fontSize: 18 * _accessibilityService.textSizeMultiplier,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ),
-                            if (!_isListening && _transcribedText.isEmpty)
-                              const SizedBox(height: 20),
-                            // Microphone button widget
-                            MicrophoneButton(
-                              isListening: _isListening,
-                              onTap: _onMicrophoneTapped,
                             ),
-                          ],
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-              
-                      const SizedBox(height: 30),
                       
-                      // User's question display
-                      if (_transcribedText.isNotEmpty)
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 20,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _isListening ? Colors.blue.shade50 : Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: _isListening ? Colors.blue.shade300 : Colors.blue.shade200,
-                              width: 2,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
+                      const SizedBox(height: 12),
+                      
+                      // Additional Options
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.9),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: Colors.green.shade300,
+                                  width: 1.5,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.green.shade200.withOpacity(0.3),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
                               ),
-                            ],
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.settings,
+                                    size: 28,
+                                    color: Colors.green.shade600,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Settings',
+                                    style: TextStyle(
+                                      fontSize: 14 * _accessibilityService.textSizeMultiplier,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green.shade700,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => const AccessibilitySetupScreen(),
+                                        ),
+                                      );
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.green.shade600,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      'Change',
+                                      style: TextStyle(
+                                        fontSize: 12 * _accessibilityService.textSizeMultiplier,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Your Question:',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontSize: 16 * _accessibilityService.textSizeMultiplier,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _transcribedText,
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontSize: 20 * _accessibilityService.textSizeMultiplier,
-                          fontWeight: FontWeight.w500,
-                          color: _isListening ? Colors.blue.shade700 : Colors.black87,
-                        ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.9),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: Colors.orange.shade300,
+                                  width: 1.5,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.orange.shade200.withOpacity(0.3),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.school,
+                                    size: 28,
+                                    color: Colors.orange.shade600,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Demo',
+                                    style: TextStyle(
+                                      fontSize: 14 * _accessibilityService.textSizeMultiplier,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.orange.shade700,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => const DemoScreen(),
+                                        ),
+                                      );
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.orange.shade600,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      'Try Demo',
+                                      style: TextStyle(
+                                        fontSize: 12 * _accessibilityService.textSizeMultiplier,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-                    
-                    // Interactive Learning Card display
-                    if (_isProcessing)
-                      const SizedBox(height: 20),
-                    if (_isProcessing)
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(24),
-                        margin: const EdgeInsets.symmetric(horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade50,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: Colors.orange.shade300,
-                            width: 2,
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.orange.shade600),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Creating your personalized learning steps...',
-                              style: TextStyle(
-                                fontSize: 16 * _accessibilityService.textSizeMultiplier,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.orange.shade700,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                    
-                    // Interactive Learning Steps
-                    if (_isLearningActive && _learningSteps.isNotEmpty)
-                      const SizedBox(height: 20),
-                    if (_isLearningActive && _learningSteps.isNotEmpty)
-                      InteractiveLearningCard(
-                        steps: _learningSteps,
-                        onComplete: _onLearningComplete,
-                        accessibilityService: _accessibilityService,
-                      ),
-                    
-                    const SizedBox(height: 40),
-                    
-                    
-                    // Clear button when there's content
-                    if ((_transcribedText.isNotEmpty || _isLearningActive) && !_isListening && !_isProcessing)
-                      const SizedBox(height: 20),
-                    if ((_transcribedText.isNotEmpty || _isLearningActive) && !_isListening && !_isProcessing)
-                        Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: ElevatedButton(
-                            onPressed: _clearAll,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.grey.shade600,
-                              foregroundColor: Colors.white,
-                              minimumSize: const Size(150, 50),
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: Text(
-                              'Clear All',
-                              style: TextStyle(fontSize: 18 * _accessibilityService.textSizeMultiplier),
-                            ),
-                          ),
-                        ),
-                    
-                    const SizedBox(height: 40), // Bottom spacing
-                    ],
-                  ),
-                ),
               ),
             ),
-          ),
-        );
-      },
-    );
-  }
-
-  /// Show help dialog with options for preferences or tutorial
-  void _showHelpDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text(
-            'Help Options',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          content: const Text(
-            'What would you like to do?',
-            style: TextStyle(fontSize: 18),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () async {
-                // Stop any ongoing TTS before navigating
-                await _flutterTts.stop();
-                Navigator.of(context).pop();
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const AccessibilitySetupScreen()),
-                ).then((_) {
-                  // Refresh the UI when returning from preferences
-                  setState(() {});
-                });
-              },
-              child: const Text(
-                'Change Preferences',
-                style: TextStyle(fontSize: 16),
-              ),
-            ),
-            TextButton(
-              onPressed: () async {
-                // Stop any ongoing TTS before navigating
-                await _flutterTts.stop();
-                Navigator.of(context).pop();
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const OnboardingScreen(returnToHome: true)),
-                );
-              },
-              child: const Text(
-                'View Tutorial',
-                style: TextStyle(fontSize: 16),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text(
-                'Cancel',
-                style: TextStyle(fontSize: 16),
-              ),
-            ),
-          ],
         );
       },
     );

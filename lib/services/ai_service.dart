@@ -28,28 +28,33 @@ IMPORTANT FORMATTING RULES:
 RESPONSE FORMAT REQUIREMENTS:
 You must format your response as a JSON object with a "steps" array. Each step should be a learning card that users can progress through one at a time.
 
-Structure your response as:
+IMPORTANT: You MUST respond with valid JSON in exactly this format:
 {
   "steps": [
     {
       "title": "Step 1: [Brief title]",
-      "content": "[Detailed explanation in simple language]",
+      "content": "[1-2 sentences maximum with specific instructions. Keep it short and focused.]",
       "question": "[Optional: Simple yes/no or multiple choice question]",
-      "options": ["Option 1", "Option 2", "Option 3"] // Only if question is multiple choice
-      "correctAnswer": "Option 1", // Only if question has options
-      "explanation": "[Why this is correct/important]", // Only if question exists
-      "requiresConfirmation": true/false // true if user should confirm they completed the step
+      "options": ["Option 1", "Option 2", "Option 3"],
+      "correctAnswer": "Option 1",
+      "explanation": "[Why this is correct/important]",
+      "requiresConfirmation": true
     }
   ]
 }
 
 When creating steps:
 - Break complex instructions into 3-5 digestible steps maximum
+- CRITICAL: Each step content should be ONLY 1-2 sentences maximum. If you need more explanation, create another step.
+- The whole point is to split information into small, digestible chunks - never put 3+ sentences in one step
 - Use plain language and avoid technical jargon
-- Be descriptive about button locations and what users should expect to see
+- Be very descriptive about button locations and what users should expect to see
+- IMPORTANT: The Settings app icon is GRAY with a gear icon (not blue)
+- Include specific details like "the gray Settings app with a gear icon" or "the green Phone app that looks like an old telephone"
 - Include a confirmation question or check every 1-2 steps
 - Make questions simple (yes/no or easy multiple choice)
 - Be encouraging and patient in your tone
+- NEVER include any text outside the JSON structure
 
 Focus exclusively on Apple devices and iOS/iPadOS/macOS:
 - Provide instructions specifically for iPhone and iPad
@@ -82,30 +87,42 @@ Remember: Your role is not just to solve the problem, but to make the person fee
 
   /// Parse AI response JSON into LearningStep objects
   List<LearningStep> _parseResponseToSteps(String response) {
-    print('DEBUG: Parsing response: ${response.substring(0, response.length > 200 ? 200 : response.length)}...');
+    // Parsing response for learning steps
     
     try {
       // Clean up the response - remove any markdown formatting or extra text
       String cleanResponse = response.trim();
       
-      // Find JSON content between curly braces
-      int startIndex = cleanResponse.indexOf('{');
-      int endIndex = cleanResponse.lastIndexOf('}');
-      
-      if (startIndex != -1 && endIndex != -1 && endIndex > startIndex) {
-        cleanResponse = cleanResponse.substring(startIndex, endIndex + 1);
-        print('DEBUG: Cleaned JSON: ${cleanResponse.substring(0, cleanResponse.length > 200 ? 200 : cleanResponse.length)}...');
+      // Remove any text before the JSON starts
+      if (cleanResponse.contains('{')) {
+        int startIndex = cleanResponse.indexOf('{');
+        cleanResponse = cleanResponse.substring(startIndex);
       }
+      
+      // Remove any text after the JSON ends
+      if (cleanResponse.contains('}')) {
+        int endIndex = cleanResponse.lastIndexOf('}');
+        cleanResponse = cleanResponse.substring(0, endIndex + 1);
+      }
+      
+      // Cleaned JSON for parsing
       
       final jsonResponse = jsonDecode(cleanResponse);
       final stepsJson = jsonResponse['steps'] as List;
       
-      print('DEBUG: Successfully parsed ${stepsJson.length} steps');
+      // Successfully parsed steps
       
-      return stepsJson.map((stepJson) {
+      List<LearningStep> parsedSteps = stepsJson.map((stepJson) {
+        // Ensure content is detailed and not just a brief phrase
+        String content = stepJson['content'] ?? '';
+        if (content.length < 50) {
+          // If content is too brief, enhance it with more detail
+          content = _enhanceStepContent(stepJson['title'] ?? 'Step', content);
+        }
+        
         return LearningStep(
           title: stepJson['title'] ?? 'Step',
-          content: stepJson['content'] ?? '',
+          content: content,
           question: stepJson['question'],
           options: stepJson['options'] != null 
               ? List<String>.from(stepJson['options']) 
@@ -115,37 +132,227 @@ Remember: Your role is not just to solve the problem, but to make the person fee
           requiresConfirmation: stepJson['requiresConfirmation'] ?? true,
         );
       }).toList();
-    } catch (e) {
-      print('DEBUG: JSON parsing failed: $e');
-      print('DEBUG: Raw response: $response');
       
-      // Fallback: create a single step from the raw response
-      return [
-        LearningStep(
-          title: 'Help with your question',
-          content: 'I\'m having trouble formatting my response right now. Let me try to help you anyway: ${response.replaceAll(RegExp(r'[{}"\[\]]'), '').replaceAll('steps:', '').replaceAll('title:', '').replaceAll('content:', '').trim()}',
-          requiresConfirmation: true,
-        ),
-      ];
+      return parsedSteps;
+    } catch (e) {
+      // JSON parsing failed
+      // Raw response fallback
+      
+      // Fallback: try to extract steps from malformed response
+      List<LearningStep> fallbackSteps = [];
+      
+      // Look for step patterns in the response - more aggressive regex to catch variations
+      RegExp stepPattern = RegExp(r'(?:Step\s*(\d+)[:\-\.]?\s*([^\n\r]*?))\s*(.*?)(?=(?:Step\s*\d+)|$)', caseSensitive: false, multiLine: true, dotAll: true);
+      Iterable<RegExpMatch> matches = stepPattern.allMatches(response);
+      
+      if (matches.isNotEmpty) {
+        for (RegExpMatch match in matches) {
+          String stepNumber = match.group(1) ?? '';
+          String stepTitle = match.group(2)?.trim() ?? '';
+          String stepContent = match.group(3)?.trim() ?? '';
+          
+          // If we have a title but no content, the title might be the content
+          if (stepContent.isEmpty && stepTitle.isNotEmpty) {
+            stepContent = stepTitle;
+            stepTitle = '';
+          }
+          
+          // Clean up step content more thoroughly
+          stepContent = stepContent
+              .replaceAll(RegExp(r'["\[\]{}]'), '')
+              .replaceAll(RegExp(r'\s+'), ' ')
+              .trim();
+          
+          // Create a proper title if we extracted one
+          String finalTitle = stepTitle.isNotEmpty ? stepTitle : 'Step $stepNumber';
+          
+          // Only add if we have substantial content (reduced threshold)
+          if (stepContent.isNotEmpty && stepContent.length > 5) {
+            fallbackSteps.add(LearningStep(
+              title: finalTitle,
+              content: stepContent,
+              requiresConfirmation: true,
+            ));
+          }
+        }
+      }
+      
+      // If no steps found with numbered pattern, try alternative patterns
+      if (fallbackSteps.isEmpty) {
+        // Look for numbered list patterns like "1.", "2.", etc.
+        RegExp numberedPattern = RegExp(r'(\d+)[\.\)]\s*([^\n\r]*?)\s*(.*?)(?=\d+[\.\)]|$)', multiLine: true, dotAll: true);
+        Iterable<RegExpMatch> numberedMatches = numberedPattern.allMatches(response);
+        
+        if (numberedMatches.length > 1) {
+          for (RegExpMatch match in numberedMatches) {
+            String stepNumber = match.group(1) ?? '';
+            String possibleTitle = match.group(2)?.trim() ?? '';
+            String stepContent = match.group(3)?.trim() ?? '';
+            
+            // If we have a possible title but no content, the title is likely the content
+            if (stepContent.isEmpty && possibleTitle.isNotEmpty) {
+              stepContent = possibleTitle;
+              possibleTitle = '';
+            }
+            
+            stepContent = stepContent
+                .replaceAll(RegExp(r'["\[\]{}]'), '')
+                .replaceAll(RegExp(r'\s+'), ' ')
+                .trim();
+            
+            String finalTitle = possibleTitle.isNotEmpty ? possibleTitle : 'Step $stepNumber';
+            
+            // Reduced threshold for content length
+            if (stepContent.isNotEmpty && stepContent.length > 5) {
+              fallbackSteps.add(LearningStep(
+                title: finalTitle,
+                content: stepContent,
+                requiresConfirmation: true,
+              ));
+            }
+          }
+        }
+      }
+      
+      // If we found steps, return them; otherwise create a single step
+      if (fallbackSteps.isNotEmpty) {
+        // Returning fallback steps
+        return fallbackSteps;
+      } else {
+        // Better content extraction for single step fallback
+        String cleanContent = response
+            .replaceAll(RegExp(r'[{}"\[\]]'), '')
+            .replaceAll('steps:', '')
+            .replaceAll('title:', '')
+            .replaceAll('content:', '')
+            .replaceAll('requiresConfirmation:', '')
+            .replaceAll('true', '')
+            .replaceAll('false', '')
+            .replaceAll(RegExp(r'\s+'), ' ')
+            .trim();
+        
+        // If content contains multiple steps, try to parse them even if JSON failed
+        if (cleanContent.contains('Step ') && cleanContent.length > 50) {
+          // Try the fallback step parsing on the cleaned content with improved regex
+          RegExp stepPattern = RegExp(r'Step\s*(\d+)[:\-\.]?\s*([^\n\r]*?)\s*(.*?)(?=Step\s*\d+|$)', caseSensitive: false, multiLine: true, dotAll: true);
+          Iterable<RegExpMatch> matches = stepPattern.allMatches(cleanContent);
+          
+          List<LearningStep> extractedSteps = [];
+          for (RegExpMatch match in matches) {
+            String stepNumber = match.group(1) ?? '';
+            String possibleTitle = match.group(2)?.trim() ?? '';
+            String stepContent = match.group(3)?.trim() ?? '';
+            
+            // If we have a possible title but no content, the title is likely the content
+            if (stepContent.isEmpty && possibleTitle.isNotEmpty) {
+              stepContent = possibleTitle;
+              possibleTitle = '';
+            }
+            
+            stepContent = stepContent
+                .replaceAll(RegExp(r'["\[\]{}]'), '')
+                .replaceAll(RegExp(r'\s+'), ' ')
+                .trim();
+            
+            String finalTitle = possibleTitle.isNotEmpty ? possibleTitle : 'Step $stepNumber';
+            
+            // Reduced threshold for content length
+            if (stepContent.isNotEmpty && stepContent.length > 5) {
+              extractedSteps.add(LearningStep(
+                title: finalTitle,
+                content: stepContent,
+                requiresConfirmation: true,
+              ));
+            }
+          }
+          
+          // If we successfully extracted multiple steps, return them
+          if (extractedSteps.length > 1) {
+            // Extracted steps from cleaned content
+            return extractedSteps;
+          }
+        }
+        
+        // If content is still too short or we couldn't extract multiple steps
+        if (cleanContent.length < 20) {
+          // For first question issues, check if we have a better original response
+          if (response.length > cleanContent.length && !response.contains('{"steps"') && response.length > 20) {
+            cleanContent = response.trim();
+          } else {
+            // Provide a comprehensive fallback for first questions
+            cleanContent = 'I understand you need help with your question. Let me walk you through this step by step. First, let\'s identify what you\'re trying to accomplish and then I\'ll guide you through each part of the process clearly and simply.';
+          }
+        }
+        
+        // Additional check: if we have what looks like a step title in the content, extract it properly
+        if (cleanContent.startsWith('Step ') && cleanContent.contains(' ')) {
+          RegExp titleExtract = RegExp(r'Step\s*\d+[:\-\.]?\s*([^\n\r]*)', caseSensitive: false);
+          RegExpMatch? titleMatch = titleExtract.firstMatch(cleanContent);
+          if (titleMatch != null) {
+            String extractedTitle = titleMatch.group(1)?.trim() ?? '';
+            if (extractedTitle.isNotEmpty) {
+              // Remove the step title from content and use it as the actual title
+              cleanContent = cleanContent.replaceFirst(titleMatch.group(0) ?? '', '').trim();
+              if (cleanContent.isEmpty) {
+                cleanContent = extractedTitle;
+                extractedTitle = 'Step-by-Step Help';
+              }
+              return [
+                LearningStep(
+                  title: extractedTitle,
+                  content: cleanContent,
+                  requiresConfirmation: true,
+                ),
+              ];
+            }
+          }
+        }
+        
+        // Creating single fallback step
+        return [
+          LearningStep(
+            title: 'Step-by-Step Help',
+            content: cleanContent,
+            requiresConfirmation: true,
+          ),
+        ];
+      }
+    }
+  }
+
+  /// Enhance brief step content with more detailed instructions
+  String _enhanceStepContent(String title, String briefContent) {
+    // Add more detailed explanations based on common step types
+    if (title.toLowerCase().contains('find') || title.toLowerCase().contains('locate')) {
+      return '$briefContent Look carefully at your home screen - you might need to swipe left or right to see all your apps. The app icons are usually arranged in a grid pattern, and each app has a distinctive icon and name underneath it.';
+    } else if (title.toLowerCase().contains('open') || title.toLowerCase().contains('tap')) {
+      return '$briefContent When you tap an app, you should see it highlight briefly before opening. If nothing happens, try tapping it again - sometimes it takes a moment to respond. The app will open and fill your entire screen.';
+    } else if (title.toLowerCase().contains('settings') || title.toLowerCase().contains('preferences')) {
+      return '$briefContent The Settings app looks like a gray gear icon. Inside Settings, you\'ll see a list of options you can scroll through. Each option controls different aspects of your device, so take your time to find what you need.';
+    } else if (title.toLowerCase().contains('call') || title.toLowerCase().contains('phone')) {
+      return '$briefContent The Phone app is essential for making calls on your iPhone. It has several tabs at the bottom including Favorites, Recents, Contacts, Keypad, and Voicemail. You can use any of these to make a call.';
+    } else {
+      // Generic enhancement for any brief content
+      return '$briefContent Take your time with this step and don\'t worry if it takes a few tries. If you get stuck, you can always ask a follow-up question for more help with this specific part.';
     }
   }
 
   /// Send a query to OpenAI with conversation history for context (legacy method)
   Future<String> getSeniorTechSupportWithHistory(String userQuery, List<Map<String, String>> conversationHistory) async {
-    print('DEBUG: Starting AI request with history for query: $userQuery');
-    print('DEBUG: Conversation history length: ${conversationHistory.length}');
-    print('DEBUG: API key configured: $isConfigured');
-    print('DEBUG: API key length: ${_apiKey.length}');
+    // Starting AI request with history
+    // Conversation history available
+    // API key configuration checked
+    // API key validated
     
     if (!isConfigured) {
-      print('DEBUG: No API key found');
+      // No API key configured
       return 'I need an API key to help you. Please check your app settings.';
     }
 
     // Retry logic for rate limiting
     for (int attempt = 0; attempt < 3; attempt++) {
       try {
-        print('DEBUG: Attempt ${attempt + 1} - Making request to OpenAI');
+        // Making request to OpenAI
         
         // Build messages array with system prompt + conversation history
         List<Map<String, String>> messages = [
@@ -171,41 +378,42 @@ Remember: Your role is not just to solve the problem, but to make the person fee
           body: jsonEncode({
             'model': _model,
             'messages': messages,
-            'max_tokens': 500, // Allow more detailed explanations for seniors
+            'max_tokens': 1500, // Increased to prevent cut-off responses
             'temperature': 0.7, // Balanced creativity and consistency
             'frequency_penalty': 0.0,
             'presence_penalty': 0.0
           }),
         );
 
-        print('DEBUG: Response status code: ${response.statusCode}');
-        print('DEBUG: Response body: ${response.body}');
+        // Response received
+        // Processing response
         
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
           final aiResponse = data['choices'][0]['message']['content'] as String;
-          print('DEBUG: Successfully got AI response');
+          // AI response successful
           return aiResponse.trim();
         } else if (response.statusCode == 401) {
-          print('DEBUG: Invalid API key error');
+          // Invalid API key
           return 'Invalid API key. Please check your OpenAI settings.';
         } else if (response.statusCode == 429) {
-          print('DEBUG: Rate limited - attempt ${attempt + 1}');
+          // Rate limited, retrying
           final errorBody = jsonDecode(response.body);
           
           // Check if it's a quota exceeded error
           if (errorBody['error']['code'] == 'insufficient_quota') {
+            // Return mock steps directly instead of JSON encoding them
+            final mockSteps = _getMockStepsWithHistory(userQuery, conversationHistory);
             return jsonEncode({
-              'steps': _getMockStepsWithHistory(userQuery, conversationHistory)
-                  .map((step) => {
-                    'title': step.title,
-                    'content': step.content,
-                    'question': step.question,
-                    'options': step.options,
-                    'correctAnswer': step.correctAnswer,
-                    'explanation': step.explanation,
-                    'requiresConfirmation': step.requiresConfirmation,
-                  }).toList()
+              'steps': mockSteps.map((step) => {
+                'title': step.title,
+                'content': step.content,
+                'question': step.question,
+                'options': step.options,
+                'correctAnswer': step.correctAnswer,
+                'explanation': step.explanation,
+                'requiresConfirmation': step.requiresConfirmation,
+              }).toList()
             });
           }
           
@@ -216,14 +424,14 @@ Remember: Your role is not just to solve the problem, but to make the person fee
           }
           return 'I\'m getting too many requests right now. Please wait 30 seconds and try again.';
         } else if (response.statusCode == 403) {
-          print('DEBUG: Billing/permissions error');
+          // Billing/permissions issue
           return 'Your OpenAI account needs billing information set up. Please visit platform.openai.com to add a payment method.';
         } else {
-          print('DEBUG: Other API error: ${response.statusCode} - ${response.body}');
+          // API error occurred
           return 'I\'m having trouble connecting right now. Error code: ${response.statusCode}. Please try again in a moment.';
         }
       } catch (e) {
-        print('DEBUG: Exception caught: $e');
+        // Exception during request
         if (attempt < 2) {
           await Future.delayed(Duration(seconds: (attempt + 1) * 2));
           continue;
@@ -237,19 +445,19 @@ Remember: Your role is not just to solve the problem, but to make the person fee
 
   /// Send a query to OpenAI and get a senior-friendly response (legacy method)
   Future<String> getSeniorTechSupport(String userQuery) async {
-    print('DEBUG: Starting AI request for query: $userQuery');
-    print('DEBUG: API key configured: $isConfigured');
-    print('DEBUG: API key length: ${_apiKey.length}');
+    // Starting AI request for query
+    // API key configuration checked
+    // API key validated
     
     if (!isConfigured) {
-      print('DEBUG: No API key found');
+      // No API key configured
       return 'I need an API key to help you. Please check your app settings.';
     }
 
     // Retry logic for rate limiting
     for (int attempt = 0; attempt < 3; attempt++) {
       try {
-        print('DEBUG: Attempt ${attempt + 1} - Making request to OpenAI');
+        // Making request to OpenAI
         final response = await http.post(
           Uri.parse(_baseUrl),
           headers: {
@@ -268,26 +476,26 @@ Remember: Your role is not just to solve the problem, but to make the person fee
                 'content': 'I need help with: $userQuery',
               },
             ],
-            'max_tokens': 500, // Allow more detailed explanations for seniors
+            'max_tokens': 1500, // Increased to prevent cut-off responses
             'temperature': 0.7, // Balanced creativity and consistency
             'frequency_penalty': 0.0,
             'presence_penalty': 0.0
           }),
         );
 
-        print('DEBUG: Response status code: ${response.statusCode}');
-        print('DEBUG: Response body: ${response.body}');
+        // Response received
+        // Processing response
         
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
           final aiResponse = data['choices'][0]['message']['content'] as String;
-          print('DEBUG: Successfully got AI response');
+          // AI response successful
           return aiResponse.trim();
         } else if (response.statusCode == 401) {
-          print('DEBUG: Invalid API key error');
+          // Invalid API key
           return 'Invalid API key. Please check your OpenAI settings.';
         } else if (response.statusCode == 429) {
-          print('DEBUG: Rate limited - attempt ${attempt + 1}');
+          // Rate limited, retrying
           final errorBody = jsonDecode(response.body);
           
           // Check if it's a quota exceeded error
@@ -302,14 +510,14 @@ Remember: Your role is not just to solve the problem, but to make the person fee
           }
           return 'I\'m getting too many requests right now. Please wait 30 seconds and try again.';
         } else if (response.statusCode == 403) {
-          print('DEBUG: Billing/permissions error');
+          // Billing/permissions issue
           return 'Your OpenAI account needs billing information set up. Please visit platform.openai.com to add a payment method.';
         } else {
-          print('DEBUG: Other API error: ${response.statusCode} - ${response.body}');
+          // API error occurred
           return 'I\'m having trouble connecting right now. Error code: ${response.statusCode}. Please try again in a moment.';
         }
       } catch (e) {
-        print('DEBUG: Exception caught: $e');
+        // Exception during request
         if (attempt < 2) {
           await Future.delayed(Duration(seconds: (attempt + 1) * 2));
           continue;
@@ -511,6 +719,44 @@ To get full AI assistance:
 Once that's done, I'll be able to give you detailed, personalized help with any tech question!
 
 (Note: This is a demo response while your OpenAI billing is being set up)''';
+    }
+  }
+
+  /// Get follow-up answer for additional questions about a step
+  Future<String> getFollowUpAnswer(String context) async {
+    try {
+      final response = await http.post(
+        Uri.parse('https://api.openai.com/v1/chat/completions'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${dotenv.env['OPENAI_API_KEY']}',
+        },
+        body: jsonEncode({
+          'model': 'gpt-3.5-turbo',
+          'messages': [
+            {
+              'role': 'system',
+              'content': 'You are a helpful tech support assistant for seniors. Provide clear, simple answers to follow-up questions about technology steps. Keep responses concise but helpful. Answer in the context of the current step the user is working on.'
+            },
+            {
+              'role': 'user',
+              'content': context,
+            }
+          ],
+          'max_tokens': 300,
+          'temperature': 0.7,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['choices'][0]['message']['content'].toString().trim();
+      } else {
+        throw Exception('Failed to get follow-up answer: ${response.statusCode}');
+      }
+    } catch (e) {
+      // Error getting follow-up answer
+      return 'I apologize, but I\'m having trouble processing your question right now. Please try asking again.';
     }
   }
 

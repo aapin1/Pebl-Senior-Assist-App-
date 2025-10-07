@@ -9,7 +9,7 @@ class AccessibilityService extends ChangeNotifier {
   AccessibilityService._internal();
 
   // Default values
-  double _textSizeMultiplier = 1.0;
+  double _textSizeMultiplier = 1.4; // Default to Large for seniors
   bool _audioPlayback = true;
   bool _hasCompletedOnboarding = false;
   bool _hasCompletedAccessibilitySetup = false;
@@ -18,6 +18,7 @@ class AccessibilityService extends ChangeNotifier {
   // Getters
   double get textSizeMultiplier => _textSizeMultiplier;
   bool get audioPlayback => _audioPlayback;
+  bool get isAudioEnabled => _audioPlayback; // Alias for consistency
   bool get hasCompletedOnboarding => _hasCompletedOnboarding;
   bool get hasCompletedAccessibilitySetup => _hasCompletedAccessibilitySetup;
 
@@ -36,21 +37,20 @@ class AccessibilityService extends ChangeNotifier {
 
   /// Initialize the service and load saved preferences
   Future<void> initialize() async {
-    final prefs = await SharedPreferences.getInstance();
+    _prefs = await SharedPreferences.getInstance();
     
-    _textSizeMultiplier = prefs.getDouble(_textSizeKey) ?? 1.0;
-    _audioPlayback = prefs.getBool(_audioPlaybackKey) ?? true;
-    _hasCompletedOnboarding = prefs.getBool(_onboardingKey) ?? false;
-    _hasCompletedAccessibilitySetup = prefs.getBool(_accessibilitySetupKey) ?? false;
+    _textSizeMultiplier = _prefs!.getDouble(_textSizeKey) ?? 1.4;
+    _audioPlayback = _prefs!.getBool(_audioPlaybackKey) ?? true;
+    _hasCompletedOnboarding = _prefs!.getBool(_onboardingKey) ?? false;
+    _hasCompletedAccessibilitySetup = _prefs!.getBool(_accessibilitySetupKey) ?? false;
     
     notifyListeners();
   }
 
-  /// Set text size multiplier (0.8 = small, 1.0 = normal, 1.2 = large, 1.5 = extra large)
+  /// Set text size multiplier (1.2 = large, 1.4 = extra large, 1.6 = extra extra large)
   Future<void> setTextSizeMultiplier(double multiplier) async {
     _textSizeMultiplier = multiplier;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble(_textSizeKey, multiplier);
+    await _prefs?.setDouble(_textSizeKey, multiplier);
     notifyListeners();
   }
 
@@ -58,32 +58,28 @@ class AccessibilityService extends ChangeNotifier {
   /// Toggle audio playback
   Future<void> setAudioPlayback(bool enabled) async {
     _audioPlayback = enabled;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_audioPlaybackKey, enabled);
+    await _prefs?.setBool(_audioPlaybackKey, enabled);
     notifyListeners();
   }
 
   /// Mark onboarding as completed
   Future<void> completeOnboarding() async {
     _hasCompletedOnboarding = true;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_onboardingKey, true);
+    await _prefs?.setBool(_onboardingKey, true);
     notifyListeners();
   }
 
   /// Mark accessibility setup as completed
   Future<void> completeAccessibilitySetup() async {
     _hasCompletedAccessibilitySetup = true;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_accessibilitySetupKey, true);
+    await _prefs?.setBool(_accessibilitySetupKey, true);
     notifyListeners();
   }
 
   /// Reset onboarding status (for testing or help replay)
   Future<void> resetOnboarding() async {
     _hasCompletedOnboarding = false;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_onboardingKey, false);
+    await _prefs?.setBool(_onboardingKey, false);
     notifyListeners();
   }
 

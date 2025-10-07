@@ -25,11 +25,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<OnboardingStep> _steps = [
     OnboardingStep(
-      title: 'Welcome to Senior Assist',
+      title: 'Welcome to Pebl',
       description: 'Your friendly voice assistant for Apple devices. Let me show you how to use this app.',
       icon: Icons.mic,
       iconColor: Colors.blue,
-      audioText: 'Welcome to Senior Assist! Your friendly voice assistant for Apple devices. Let me show you how to use this app.',
+      audioText: 'Welcome to Pebl! Your friendly voice assistant for Apple devices. Let me show you how to use this app.',
     ),
     OnboardingStep(
       title: 'Step 1: Tap the Microphone',
@@ -46,11 +46,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       audioText: 'Step 2: Ask Your Question. Speak clearly and ask any question about your iPhone, iPad, or Mac. For example: How do I make text bigger? or How do I connect to WiFi?',
     ),
     OnboardingStep(
-      title: 'Step 3: Listen to the Answer',
-      description: 'I will speak the answer out loud and also show it on your screen. The text will be large and easy to read.',
-      icon: Icons.hearing,
+      title: 'Step 3: Read the Answer',
+      description: 'I will show the answer on your screen with large, easy-to-read text. You can also enable audio to have it read aloud.',
+      icon: Icons.visibility,
       iconColor: Colors.purple,
-      audioText: 'Step 3: Listen to the Answer. I will speak the answer out loud and also show it on your screen. The text will be large and easy to read.',
+      audioText: 'Step 3: Read the Answer. I will show the answer on your screen with large, easy-to-read text. You can also enable audio to have it read aloud.',
     ),
     OnboardingStep(
       title: 'Step 4: Get More Help',
@@ -136,7 +136,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     } else {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (context) => const AccessibilitySetupScreen(),
+          builder: (context) => const HomeScreen(),
         ),
       );
     }
@@ -171,192 +171,177 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Progress indicator
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Row(
-                children: [
-                  Text(
-                    'Step ${_currentPage + 1} of ${_steps.length}',
-                    style: TextStyle(
-                      fontSize: 16 * _accessibilityService.textSizeMultiplier,
-                      color: Colors.grey.shade600,
-                      fontWeight: FontWeight.w500,
-                    ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.blue.shade100,
+              Colors.blue.shade50,
+              Colors.white,
+              Colors.green.shade50,
+              Colors.green.shade100,
+            ],
+            stops: const [0.0, 0.2, 0.5, 0.8, 1.0],
+          ),
+        ),
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: SafeArea(
+            child: Column(
+              children: [
+                // Progress indicator
+                Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: const SizedBox.shrink(),
+                ),
+                // Progress bar
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                  child: LinearProgressIndicator(
+                    value: (_currentPage + 1) / _steps.length,
+                    backgroundColor: Colors.grey.shade300,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade600),
+                    minHeight: 4,
                   ),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: _skipOnboarding,
-                    child: Text(
-                      'Skip',
-                      style: TextStyle(
-                        fontSize: 16 * _accessibilityService.textSizeMultiplier,
-                        color: Colors.blue.shade600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            // Progress bar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              child: LinearProgressIndicator(
-                value: (_currentPage + 1) / _steps.length,
-                backgroundColor: Colors.grey.shade300,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade600),
-                minHeight: 4,
-              ),
-            ),
-            
-            // Main content
-            Expanded(
-              child: PageView.builder(
-                controller: _pageController,
-                onPageChanged: (index) async {
-                  // Stop any ongoing TTS when page changes
-                  await _flutterTts.stop();
-                  setState(() {
-                    _currentPage = index;
-                    _isPlaying = false;
-                  });
-                },
-                itemCount: _steps.length,
-                itemBuilder: (context, index) {
-                  final step = _steps[index];
-                  return SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24.0),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 20),
-                        // Icon
-                        Container(
-                          width: 120,
-                          height: 120,
-                          decoration: BoxDecoration(
-                            color: step.iconColor.withOpacity(0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            step.icon,
-                            size: 60,
-                            color: step.iconColor,
-                          ),
-                        ),
-                        
-                        const SizedBox(height: 40),
-                        
-                        // Title
-                        Text(
-                          step.title,
-                          style: TextStyle(
-                            fontSize: 24 * _accessibilityService.textSizeMultiplier,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        
-                        const SizedBox(height: 20),
-                        
-                        // Description
-                        Text(
-                          step.description,
-                          style: TextStyle(
-                            fontSize: 18 * _accessibilityService.textSizeMultiplier,
-                            color: Colors.black87,
-                            height: 1.4,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        
-                        const SizedBox(height: 30),
-                        
-                        // Audio play button
-                        ElevatedButton.icon(
-                          onPressed: () => _playAudio(step.audioText),
-                          icon: Icon(_isPlaying ? Icons.stop : Icons.play_arrow),
-                          label: Text(
-                            _isPlaying ? 'Stop Audio' : 'Play Audio',
-                            style: TextStyle(
-                              fontSize: 16 * _accessibilityService.textSizeMultiplier,
+                ),
+                // Main content
+                Expanded(
+                  child: PageView.builder(
+                    controller: _pageController,
+                    onPageChanged: (index) async {
+                      // Stop any ongoing TTS when page changes
+                      await _flutterTts.stop();
+                      setState(() {
+                        _currentPage = index;
+                        _isPlaying = false;
+                      });
+                    },
+                    itemCount: _steps.length,
+                    itemBuilder: (context, index) {
+                      final step = _steps[index];
+                      return SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const SizedBox(height: 40),
+                            // Icon with glow effect
+                            Container(
+                              width: 120,
+                              height: 120,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: RadialGradient(
+                                  colors: [
+                                    _steps[_currentPage].iconColor.withAlpha(30),
+                                    _steps[_currentPage].iconColor.withAlpha(10),
+                                    Colors.transparent,
+                                  ],
+                                ),
+                              ),
+                              child: Icon(
+                                _steps[_currentPage].icon,
+                                size: 60,
+                                color: _steps[_currentPage].iconColor,
+                              ),
                             ),
-                          ),
+                            const SizedBox(height: 40),
+                            // Title
+                            Text(
+                              _steps[_currentPage].title,
+                              style: TextStyle(
+                                fontSize: 28 * _accessibilityService.textSizeMultiplier,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey.shade800,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 24),
+                            // Description
+                            Text(
+                              _steps[_currentPage].description,
+                              style: TextStyle(
+                                fontSize: 18 * _accessibilityService.textSizeMultiplier,
+                                color: Colors.grey.shade600,
+                                height: 1.5,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 60),
+                            // Audio play button
+                            ElevatedButton.icon(
+                              onPressed: () => _playAudio(step.audioText),
+                              icon: Icon(_isPlaying ? Icons.stop : Icons.play_arrow),
+                              label: Text(
+                                _isPlaying ? 'Stop Audio' : 'Play Audio',
+                                style: TextStyle(
+                                  fontSize: 16 * _accessibilityService.textSizeMultiplier,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue.shade600,
+                                foregroundColor: Colors.white,
+                                minimumSize: const Size(150, 45),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                // Navigation buttons
+                Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Row(
+                    children: [
+                      if (_currentPage > 0)
+                        ElevatedButton(
+                          onPressed: _previousPage,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue.shade600,
-                            foregroundColor: Colors.white,
-                            minimumSize: const Size(150, 45),
+                            backgroundColor: Colors.grey.shade300,
+                            foregroundColor: Colors.grey.shade700,
+                            minimumSize: const Size(100, 45),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
+                          child: const Text(
+                            'Previous',
+                            style: TextStyle(
+                              fontSize: 16,
+                            ),
+                          ),
                         ),
-                        
-                        const SizedBox(height: 30),
-                      ],
-                    ),
+                      const Spacer(),
+                      ElevatedButton(
+                        onPressed: _currentPage == _steps.length - 1 ? _completeOnboarding : _nextPage,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue.shade600,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(120, 45),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          _currentPage == _steps.length - 1 ? 'Finish' : 'Next',
+                          style: const TextStyle(
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  );
-                },
-              ),
+                ),
+              ],
             ),
-            
-            // Navigation buttons
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  // Previous button
-                  if (_currentPage > 0)
-                    ElevatedButton(
-                      onPressed: _previousPage,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey.shade600,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size(100, 45),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        'Back',
-                        style: TextStyle(
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                  
-                  const Spacer(),
-                  
-                  // Next/Finish button
-                  ElevatedButton(
-                    onPressed: _nextPage,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue.shade600,
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(120, 45),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(
-                      _currentPage == _steps.length - 1 ? 'Finish' : 'Next',
-                      style: TextStyle(
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

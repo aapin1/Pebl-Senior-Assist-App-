@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import '../services/accessibility_service.dart';
-import 'tutorial_prompt_screen.dart';
+import 'home_screen.dart';
 
 /// First-time accessibility setup survey screen
 /// Asks users about vision, hearing, and preference needs
@@ -16,13 +16,11 @@ class _AccessibilitySetupScreenState extends State<AccessibilitySetupScreen> {
   final PageController _pageController = PageController();
   final FlutterTts _flutterTts = FlutterTts();
   final AccessibilityService _accessibilityService = AccessibilityService();
-  
   int _currentPage = 0;
   bool _isPlaying = false;
-  
-  // User responses
-  double _selectedTextSize = 1.0;
   bool _wantsAudioPlayback = true;
+  bool _isAudioEnabled = true;
+  double _selectedTextSize = 1.0;
 
   final List<SetupStep> _steps = [
     SetupStep(
@@ -73,34 +71,22 @@ class _AccessibilitySetupScreenState extends State<AccessibilitySetupScreen> {
   }
 
   void _nextPage() async {
-    // Stop any ongoing TTS when navigating
     await _flutterTts.stop();
-    setState(() {
-      _isPlaying = false;
-    });
-    
     if (_currentPage < _steps.length - 1) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
+      setState(() {
+        _currentPage++;
+      });
     } else {
       _completeSetup();
     }
   }
 
   void _previousPage() async {
-    // Stop any ongoing TTS when navigating
     await _flutterTts.stop();
-    setState(() {
-      _isPlaying = false;
-    });
-    
     if (_currentPage > 0) {
-      _pageController.previousPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
+      setState(() {
+        _currentPage--;
+      });
     }
   }
 
@@ -108,16 +94,17 @@ class _AccessibilitySetupScreenState extends State<AccessibilitySetupScreen> {
     // Stop any ongoing TTS before navigating
     await _flutterTts.stop();
     
-    // Save all preferences
-    await _accessibilityService.setTextSizeMultiplier(_selectedTextSize);
+    // Save audio preference to accessibility service
     await _accessibilityService.setAudioPlayback(_wantsAudioPlayback);
+    
+    // Save all preferences
     await _accessibilityService.completeAccessibilitySetup();
 
-    // Navigate to tutorial prompt screen
+    // Navigate directly to the Home screen (new flow: Welcome -> Preferences -> Home)
     if (mounted) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (context) => const TutorialPromptScreen(),
+          builder: (context) => const HomeScreen(),
         ),
       );
     }
@@ -125,37 +112,39 @@ class _AccessibilitySetupScreenState extends State<AccessibilitySetupScreen> {
 
 
   Widget _buildWelcomePage() {
-    return Padding(
-      padding: const EdgeInsets.all(32.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.settings_accessibility,
-            size: 80,
-            color: Colors.blue.shade600,
-          ),
-          const SizedBox(height: 40),
-          Text(
-            _steps[0].title,
-            style: TextStyle(
-              fontSize: 28 * _accessibilityService.textSizeMultiplier,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 48.0, vertical: 32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.settings_accessibility,
+              size: 80,
+              color: Colors.blue.shade600,
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          Text(
-            _steps[0].description,
-            style: TextStyle(
-              fontSize: 20 * _accessibilityService.textSizeMultiplier,
-              color: Colors.black87,
-              height: 1.5,
+            const SizedBox(height: 40),
+            Text(
+              _steps[0].title,
+              style: TextStyle(
+                fontSize: 24 * _accessibilityService.textSizeMultiplier,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue.shade800,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+            const SizedBox(height: 24),
+            Text(
+              _steps[0].description,
+              style: TextStyle(
+                fontSize: 16 * _accessibilityService.textSizeMultiplier,
+                color: Colors.grey.shade700,
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -163,167 +152,218 @@ class _AccessibilitySetupScreenState extends State<AccessibilitySetupScreen> {
   Widget _buildTextSizePage() {
     return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.symmetric(horizontal: 48.0, vertical: 32.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const SizedBox(height: 20),
-            const Text(
-              'Text Size',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
+            Icon(
+              Icons.text_fields,
+              size: 80,
+              color: Colors.green.shade600,
             ),
-            const SizedBox(height: 30),
-            
-            const Text(
-              'Choose your preferred text size:',
-              style: TextStyle(fontSize: 18, color: Colors.black87),
+            const SizedBox(height: 40),
+            Text(
+              _steps[1].title,
+              style: TextStyle(
+                fontSize: 24 * _accessibilityService.textSizeMultiplier,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue.shade800,
+              ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 30),
-            
-            // Sample text that changes size
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300, width: 2),
-                borderRadius: BorderRadius.circular(12),
-                color: Colors.grey.shade50,
+            const SizedBox(height: 24),
+            Text(
+              _steps[1].description,
+              style: TextStyle(
+                fontSize: 16 * _accessibilityService.textSizeMultiplier,
+                color: Colors.grey.shade700,
+                height: 1.5,
               ),
-              child: Text(
-                'Sample text to show size',
-                style: TextStyle(
-                  fontSize: 18 * _selectedTextSize,
-                  color: Colors.black87,
-                ),
-                textAlign: TextAlign.center,
-              ),
+              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 32),
             
-            // Text size options
+            // Text size buttons
             Column(
               children: [
-                _buildTextSizeOption('Medium', 1.0),
+                _buildTextSizeButton('Medium', 1.2),
                 const SizedBox(height: 12),
-                _buildTextSizeOption('Large', 1.25),
+                _buildTextSizeButton('Large', 1.4),
                 const SizedBox(height: 12),
-                _buildTextSizeOption('Extra Large', 1.5),
+                _buildTextSizeButton('Extra Large', 1.6),
               ],
             ),
-            
-            const SizedBox(height: 40),
-            
-            const SizedBox(height: 20),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTextSizeOption(String label, double multiplier) {
+  Widget _buildTextSizeButton(String label, double multiplier) {
+    bool isSelected = _accessibilityService.textSizeMultiplier == multiplier;
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
         onPressed: () {
           setState(() {
-            _selectedTextSize = multiplier;
+            _accessibilityService.setTextSizeMultiplier(multiplier);
           });
         },
         style: ElevatedButton.styleFrom(
-          backgroundColor: _selectedTextSize == multiplier ? Colors.blue.shade600 : Colors.grey.shade200,
-          foregroundColor: _selectedTextSize == multiplier ? Colors.white : Colors.black87,
-          minimumSize: const Size(0, 60), // Fixed button size
+          backgroundColor: isSelected ? Colors.blue.shade600 : Colors.white,
+          foregroundColor: isSelected ? Colors.white : Colors.blue.shade600,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          minimumSize: const Size(0, 60),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: Colors.blue.shade600),
+          ),
         ),
         child: Text(
           label,
-          style: const TextStyle(fontSize: 18), // Fixed button text size
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildYesNoPage(int pageIndex, bool currentValue, Function(bool) onChanged, IconData icon, Color iconColor) {
-    return Padding(
-      padding: const EdgeInsets.all(32.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
-            size: 60,
-            color: iconColor,
-          ),
-          const SizedBox(height: 40),
-          Text(
-            _steps[pageIndex].title,
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
+  Widget _buildYesNoPage(int stepIndex, bool currentValue, Function(bool) onChanged, IconData icon, Color iconColor) {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 48.0, vertical: 32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 60,
+              color: iconColor,
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          Text(
-            _steps[pageIndex].description,
-            style: const TextStyle(
-              fontSize: 20,
-              color: Colors.black87,
-              height: 1.5,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 50),
-          
-          // Yes/No buttons
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => onChanged(true),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: currentValue ? Colors.green.shade600 : Colors.grey.shade200,
-                    foregroundColor: currentValue ? Colors.white : Colors.black87,
-                    minimumSize: const Size(0, 80),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    'Yes',
-                    style: TextStyle(fontSize: 22),
-                  ),
-                ),
+            const SizedBox(height: 24),
+            Text(
+              _steps[stepIndex].title,
+              style: TextStyle(
+                fontSize: 22 * _accessibilityService.textSizeMultiplier,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue.shade800,
               ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => onChanged(false),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: !currentValue ? Colors.red.shade600 : Colors.grey.shade200,
-                    foregroundColor: !currentValue ? Colors.white : Colors.black87,
-                    minimumSize: const Size(0, 80),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _steps[stepIndex].description,
+              style: TextStyle(
+                fontSize: 14 * _accessibilityService.textSizeMultiplier,
+                color: Colors.grey.shade700,
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            
+            // Add silent mode reminder for audio step
+            if (stepIndex == 2) ...[
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.orange.shade200),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.volume_off,
+                          color: Colors.orange.shade600,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Turn off silent mode to hear audio',
+                            style: TextStyle(
+                              fontSize: 12 * _accessibilityService.textSizeMultiplier,
+                              color: Colors.orange.shade800,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  child: const Text(
-                    'No',
-                    style: TextStyle(fontSize: 22),
-                  ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'If unsure, flip the switch on the left side UP (not down)',
+                      style: TextStyle(
+                        fontSize: 11 * _accessibilityService.textSizeMultiplier,
+                        color: Colors.orange.shade700,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
               ),
             ],
-          ),
-          
-          const SizedBox(height: 40),
-        ],
+            
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                _buildYesNoButton('Yes', true, currentValue, onChanged),
+                const SizedBox(width: 16),
+                _buildYesNoButton('No', false, currentValue, onChanged),
+              ],
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  Widget _buildYesNoButton(String label, bool value, bool currentValue, Function(bool) onChanged) {
+    bool isSelected = currentValue == value;
+    return Expanded(
+      child: ElevatedButton(
+        onPressed: () => onChanged(value),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: isSelected ? Colors.blue.shade600 : Colors.white,
+          foregroundColor: isSelected ? Colors.white : Colors.blue.shade600,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          minimumSize: const Size(0, 60),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: Colors.blue.shade600),
+          ),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCurrentPage() {
+    switch (_currentPage) {
+      case 0:
+        return _buildWelcomePage();
+      case 1:
+        return _buildTextSizePage();
+      case 2:
+        return _buildYesNoPage(2, _wantsAudioPlayback, (value) {
+          setState(() {
+            _wantsAudioPlayback = value;
+          });
+        }, Icons.volume_up, Colors.purple.shade600);
+      default:
+        return _buildWelcomePage();
+    }
   }
 
   @override
@@ -335,59 +375,37 @@ class _AccessibilitySetupScreenState extends State<AccessibilitySetupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.blue.shade100,
+              Colors.blue.shade50,
+              Colors.white,
+              Colors.green.shade50,
+              Colors.green.shade100,
+            ],
+            stops: const [0.0, 0.2, 0.5, 0.8, 1.0],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
             // Progress indicator
             Padding(
               padding: const EdgeInsets.all(20.0),
               child: Row(
                 children: [
                   Text(
-                    'Setup ${_currentPage + 1} of ${_steps.length}',
+                    'Step ${_currentPage + 1} of ${_steps.length}',
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 16 * _accessibilityService.textSizeMultiplier,
                       color: Colors.grey.shade600,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  const Spacer(),
-                  // Add play audio button only in setup portion
-                  ElevatedButton.icon(
-                    onPressed: () => _playAudio(_steps[_currentPage].audioText),
-                    icon: Icon(_isPlaying ? Icons.stop : Icons.volume_up, size: 16),
-                    label: Text(
-                      _isPlaying ? 'Stop' : 'Audio',
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue.shade600,
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(80, 35),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  if (_currentPage > 0)
-                    TextButton(
-                      onPressed: () async {
-                        // Stop any ongoing TTS before navigating
-                        await _flutterTts.stop();
-                        _accessibilityService.completeOnboarding();
-                        _accessibilityService.completeAccessibilitySetup();
-                        Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(builder: (context) => const TutorialPromptScreen()),
-                        );
-                      },
-                      child: Text(
-                        'Skip',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.blue.shade600,
-                        ),
-                      ),
-                    ),
                 ],
               ),
             ),
@@ -405,41 +423,12 @@ class _AccessibilitySetupScreenState extends State<AccessibilitySetupScreen> {
             
             // Main content
             Expanded(
-              child: PageView.builder(
-                controller: _pageController,
-                onPageChanged: (index) async {
-                  // Stop any ongoing TTS when page changes
-                  await _flutterTts.stop();
-                  setState(() {
-                    _currentPage = index;
-                    _isPlaying = false;
-                  });
-                },
-                itemCount: _steps.length,
-                itemBuilder: (context, index) {
-                  switch (index) {
-                    case 0:
-                      return _buildWelcomePage();
-                    case 1:
-                      return _buildTextSizePage();
-                    case 2:
-                      return _buildYesNoPage(
-                        2,
-                        _wantsAudioPlayback,
-                        (value) => setState(() => _wantsAudioPlayback = value),
-                        Icons.volume_up,
-                        Colors.teal.shade600,
-                      );
-                    default:
-                      return Container();
-                  }
-                },
-              ),
+              child: _buildCurrentPage(),
             ),
             
-            // Navigation buttons
+            // Navigation buttons at bottom
             Padding(
-              padding: const EdgeInsets.all(20.0),
+              padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
                   // Previous button
@@ -449,9 +438,17 @@ class _AccessibilitySetupScreenState extends State<AccessibilitySetupScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.grey.shade600,
                         foregroundColor: Colors.white,
-                        minimumSize: const Size(100, 50),
+                        minimumSize: const Size(100, 45),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
-                      child: Text('Back'),
+                      child: const Text(
+                        'Back',
+                        style: TextStyle(
+                          fontSize: 16,
+                        ),
+                      ),
                     ),
                   
                   const Spacer(),
@@ -462,16 +459,23 @@ class _AccessibilitySetupScreenState extends State<AccessibilitySetupScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue.shade600,
                       foregroundColor: Colors.white,
-                      minimumSize: const Size(120, 50),
+                      minimumSize: const Size(120, 45),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: Text(
-                      _currentPage == _steps.length - 1 ? 'Finish Setup' : 'Next',
+                      _currentPage == _steps.length - 1 ? 'Finish' : 'Next',
+                      style: const TextStyle(
+                        fontSize: 16,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );
