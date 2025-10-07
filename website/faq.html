@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FAQ - Pebl Tech Help</title>
+    <meta name="description" content="Frequently asked questions about Pebl Tech Help - your AI-powered voice assistant for technology support.">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/style.css">
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        .faq-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 120px 20px 80px;
+        }
+        
+        .faq-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        .faq-title {
+            font-size: 3rem;
+            color: #1e293b;
+            margin-bottom: 1rem;
+        }
+        
+        .faq-subtitle {
+            font-size: 1.25rem;
+            color: #64748b;
+        }
+        
+        .faq-item {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .faq-question {
+            padding: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            border: none;
+            width: 100%;
+            text-align: left;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1e293b;
+            transition: background-color 0.3s ease;
+        }
+        
+        .faq-question:hover {
+            background: #f8fafc;
+        }
+        
+        .faq-question.active {
+            background: #dbeafe;
+            color: #3b82f6;
+        }
+        
+        .faq-icon {
+            font-size: 1.25rem;
+            transition: transform 0.3s ease;
+            color: #3b82f6;
+        }
+        
+        .faq-answer {
+            display: none;
+            padding: 0 1.5rem 1.5rem;
+            color: #64748b;
+            line-height: 1.6;
+        }
+        
+        .faq-answer p {
+            margin-bottom: 1rem;
+        }
+        
+        .faq-answer ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .faq-answer li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .contact-cta {
+            background: linear-gradient(135deg, #f0f9ff, #dbeafe);
+            padding: 3rem;
+            border-radius: 20px;
+            text-align: center;
+            margin-top: 3rem;
+        }
+        
+        .contact-cta h3 {
+            color: #1e293b;
+            margin-bottom: 1rem;
+        }
+        
+        .contact-cta p {
+            color: #64748b;
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-robot nav-icon"></i>
+                <span class="nav-title">Pebl</span>
+            </div>
+            <div class="nav-menu" id="nav-menu">
+                <a href="index.html" class="nav-link">Home</a>
+                <a href="index.html#features" class="nav-link">Features</a>
+                <a href="index.html#how-it-works" class="nav-link">How It Works</a>
+                <a href="index.html#download" class="nav-link">Download</a>
+                <a href="index.html#support" class="nav-link">Support</a>
+            </div>
+            <div class="nav-toggle" id="nav-toggle">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- FAQ Content -->
+    <div class="faq-container">
+        <div class="faq-header">
+            <h1 class="faq-title">Frequently Asked Questions</h1>
+            <p class="faq-subtitle">Find answers to common questions about Pebl Tech Help</p>
+        </div>
+
+        <div class="faq-list">
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFAQ(this)">
+                    What is Pebl Tech Help?
+                    <i class="fas fa-plus faq-icon"></i>
+                </button>
+                <div class="faq-answer">
+                    <p>Pebl Tech Help is an AI-powered voice assistant app designed specifically to help seniors and anyone who needs simple, clear technology support. You can ask questions about your iPhone, iPad, or other tech problems using your voice, and get step-by-step instructions that are easy to follow.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFAQ(this)">
+                    How does the voice recognition work?
+                    <i class="fas fa-plus faq-icon"></i>
+                </button>
+                <div class="faq-answer">
+                    <p>Pebl uses advanced speech recognition technology to understand your questions in natural language. Simply tap the microphone button and speak your question normally - you don't need to use specific commands or keywords.</p>
+                    <p>The app works best in quiet environments and supports English language recognition. It can understand various accents and speaking styles.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFAQ(this)">
+                    What types of questions can I ask?
+                    <i class="fas fa-plus faq-icon"></i>
+                </button>
+                <div class="faq-answer">
+                    <p>You can ask about a wide range of technology topics, including:</p>
+                    <ul>
+                        <li>Making phone calls and managing contacts</li>
+                        <li>Connecting to WiFi and internet issues</li>
+                        <li>Using apps and managing your device</li>
+                        <li>Sending messages and emails</li>
+                        <li>Adjusting settings and accessibility features</li>
+                        <li>Troubleshooting common problems</li>
+                    </ul>
+                    <p>The app specializes in Apple devices (iPhone and iPad) but can help with general technology questions too.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFAQ(this)">
+                    Is my data safe and private?
+                    <i class="fas fa-plus faq-icon"></i>
+                </button>
+                <div class="faq-answer">
+                    <p>Yes, your privacy is our top priority. Pebl Tech Help:</p>
+                    <ul>
+                        <li>Does not store your voice recordings permanently</li>
+                        <li>Does not collect personal information</li>
+                        <li>Does not share your data with third parties</li>
+                        <li>Uses secure, encrypted connections</li>
+                        <li>Processes your questions only to provide helpful responses</li>
+                    </ul>
+                    <p>You can review our full Privacy Policy for more details about how we protect your information.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFAQ(this)">
+                    Do I need an internet connection?
+                    <i class="fas fa-plus faq-icon"></i>
+                </button>
+                <div class="faq-answer">
+                    <p>Yes, Pebl Tech Help requires an internet connection (WiFi or cellular data) to process your questions and provide responses. The app uses AI technology that runs in the cloud to give you the most accurate and up-to-date help.</p>
+                    <p>A stable internet connection will provide the best experience, but the app can work with slower connections too.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFAQ(this)">
+                    How much does the app cost?
+                    <i class="fas fa-plus faq-icon"></i>
+                </button>
+                <div class="faq-answer">
+                    <p>Pebl Tech Help is free to download and use. There are no subscription fees or hidden costs. We believe everyone should have access to helpful technology support.</p>
+                    <p>The app may show occasional, family-friendly advertisements to help keep the service free for everyone.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFAQ(this)">
+                    What devices are supported?
+                    <i class="fas fa-plus faq-icon"></i>
+                </button>
+                <div class="faq-answer">
+                    <p>Currently, Pebl Tech Help is available for:</p>
+                    <ul>
+                        <li>iPhone (iOS 14.0 or later)</li>
+                        <li>iPad (iOS 14.0 or later)</li>
+                    </ul>
+                    <p>An Android version is coming soon! The app works best on devices with a built-in microphone and speakers.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFAQ(this)">
+                    Can I adjust the text size and audio settings?
+                    <i class="fas fa-plus faq-icon"></i>
+                </button>
+                <div class="faq-answer">
+                    <p>Yes! Pebl Tech Help is designed with accessibility in mind:</p>
+                    <ul>
+                        <li>Adjustable text size for better readability</li>
+                        <li>Audio responses that read answers aloud</li>
+                        <li>Adjustable speech speed and volume</li>
+                        <li>High contrast mode support</li>
+                        <li>Large, easy-to-tap buttons</li>
+                    </ul>
+                    <p>You can customize these settings during your first use of the app or change them anytime in the settings menu.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFAQ(this)">
+                    What if the app doesn't understand my question?
+                    <i class="fas fa-plus faq-icon"></i>
+                </button>
+                <div class="faq-answer">
+                    <p>If Pebl doesn't understand your question:</p>
+                    <ul>
+                        <li>Try speaking more slowly and clearly</li>
+                        <li>Rephrase your question in simpler terms</li>
+                        <li>Make sure you're in a quiet environment</li>
+                        <li>Check that your microphone permissions are enabled</li>
+                    </ul>
+                    <p>The app learns and improves over time, so it gets better at understanding different ways of asking questions.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFAQ(this)">
+                    Why does the app ask for microphone permission?
+                    <i class="fas fa-plus faq-icon"></i>
+                </button>
+                <div class="faq-answer">
+                    <p>Pebl needs microphone access to hear your questions and convert your speech to text. This permission is essential for the app to work properly.</p>
+                    <p>Your voice is only used to understand your question - we don't record or store your voice permanently. If you accidentally denied permission, you can enable it by going to Settings > Privacy & Security > Microphone > Pebl and turning it on.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFAQ(this)">
+                    What are the interactive learning cards?
+                    <i class="fas fa-plus faq-icon"></i>
+                </button>
+                <div class="faq-answer">
+                    <p>Instead of giving you long, overwhelming answers, Pebl breaks solutions into interactive learning cards. Each card contains:</p>
+                    <ul>
+                        <li>One clear step with detailed instructions</li>
+                        <li>Progress indicators so you know how many steps remain</li>
+                        <li>Optional questions to check your understanding</li>
+                        <li>Previous/Continue buttons to go at your own pace</li>
+                    </ul>
+                    <p>This makes complex tech problems much easier to solve step-by-step!</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFAQ(this)">
+                    Can I ask follow-up questions?
+                    <i class="fas fa-plus faq-icon"></i>
+                </button>
+                <div class="faq-answer">
+                    <p>Absolutely! Pebl remembers the context of your conversation, so you can ask follow-up questions like:</p>
+                    <ul>
+                        <li>"What if I don't see that button?"</li>
+                        <li>"Can you explain step 2 again?"</li>
+                        <li>"What does that icon look like?"</li>
+                        <li>"Where exactly is the Settings app?"</li>
+                    </ul>
+                    <p>The app maintains conversation history during your session to provide more helpful, contextual answers.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFAQ(this)">
+                    What if the app crashes or freezes?
+                    <i class="fas fa-plus faq-icon"></i>
+                </button>
+                <div class="faq-answer">
+                    <p>If Pebl crashes or becomes unresponsive:</p>
+                    <ul>
+                        <li>Force close the app by double-tapping the home button and swiping up on Pebl</li>
+                        <li>Restart the app from your home screen</li>
+                        <li>If problems persist, restart your iPhone/iPad</li>
+                        <li>Make sure you have the latest version from the App Store</li>
+                        <li>Check that you have a stable internet connection</li>
+                    </ul>
+                    <p>If crashes continue, please email us at pebl.help@gmail.com with details about when it happens.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFAQ(this)">
+                    How accurate is the voice recognition?
+                    <i class="fas fa-plus faq-icon"></i>
+                </button>
+                <div class="faq-answer">
+                    <p>Pebl uses advanced speech recognition that works well with most accents and speaking styles. For best results:</p>
+                    <ul>
+                        <li>Speak clearly and at a normal pace</li>
+                        <li>Use the app in a quiet environment</li>
+                        <li>Hold your device 6-12 inches from your mouth</li>
+                        <li>Speak in complete sentences rather than single words</li>
+                    </ul>
+                    <p>If the app misunderstands, simply tap the microphone again and rephrase your question.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFAQ(this)">
+                    Can I use Pebl without speaking aloud?
+                    <i class="fas fa-plus faq-icon"></i>
+                </button>
+                <div class="faq-answer">
+                    <p>Currently, Pebl is designed as a voice-first app and requires speaking your questions. However, you can:</p>
+                    <ul>
+                        <li>Speak quietly - the app works with whispers too</li>
+                        <li>Use headphones for privacy in public spaces</li>
+                        <li>Ask questions when you're alone or in a private space</li>
+                    </ul>
+                    <p>We're considering adding text input in future updates based on user feedback.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFAQ(this)">
+                    How do I get help if I'm still stuck?
+                    <i class="fas fa-plus faq-icon"></i>
+                </button>
+                <div class="faq-answer">
+                    <p>If you need additional help:</p>
+                    <ul>
+                        <li>Email us at pebl.help@gmail.com</li>
+                        <li>Visit our GitHub repository for technical issues</li>
+                        <li>Ask follow-up questions within the app</li>
+                        <li>Check our website for updates and tips</li>
+                    </ul>
+                    <p>We typically respond to support emails within 24 hours and are always happy to help!</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="contact-cta">
+            <h3>Still have questions?</h3>
+            <p>We're here to help! Contact our support team and we'll get back to you quickly.</p>
+            <a href="mailto:pebl.help@gmail.com" class="btn btn-primary">
+                <i class="fas fa-envelope"></i>
+                Contact Support
+            </a>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <div class="footer-logo">
+                        <i class="fas fa-robot"></i>
+                        <span>Pebl</span>
+                    </div>
+                    <p class="footer-description">Making technology accessible and easy to understand for everyone.</p>
+                </div>
+                <div class="footer-section">
+                    <h4 class="footer-title">Product</h4>
+                    <ul class="footer-links">
+                        <li><a href="index.html#features">Features</a></li>
+                        <li><a href="index.html#how-it-works">How It Works</a></li>
+                        <li><a href="index.html#download">Download</a></li>
+                        <li><a href="faq.html">FAQ</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4 class="footer-title">Support</h4>
+                    <ul class="footer-links">
+                        <li><a href="index.html#support">Help Center</a></li>
+                        <li><a href="mailto:pebl.help@gmail.com">Contact Us</a></li>
+                        <li><a href="privacy.html">Privacy Policy</a></li>
+                        <li><a href="terms.html">Terms of Service</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4 class="footer-title">Company</h4>
+                    <ul class="footer-links">
+                        <li><a href="about.html">About Us</a></li>
+                        <li><a href="https://github.com/aapin1/app-dev" target="_blank">GitHub</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p class="footer-copyright">
+                    © 2024 Pebl Tech Help. All rights reserved. Made with ❤️ for seniors everywhere.
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="js/script.js"></script>
+</body>
+</html>
