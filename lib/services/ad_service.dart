@@ -26,6 +26,12 @@ class AdService {
   // Show ad every query (1 question = 1 ad)
   static const int _queriesBeforeAd = 1;
   
+  // Track number of consecutive ad load failures for better retry logic
+  int _consecutiveFailures = 0;
+  
+  // Track if we're currently loading an ad to prevent duplicate loads
+  bool _isLoadingAd = false;
+  
   // Shared preferences key for persistent query counting
   static const String _queryCountKey = 'query_count';
   
@@ -69,8 +75,12 @@ class AdService {
 
   /// Load an interstitial ad
   Future<void> _loadInterstitialAd() async {
-    // Don't load if ads are disabled
-    if (!_adsEnabled) return;
+    // Don't load if ads are disabled or already loading
+    if (!_adsEnabled || _isLoadingAd) return;
+    
+    // Mark as loading to prevent duplicate requests
+    _isLoadingAd = true;
+    print('📥 Loading interstitial ad...');
 
     // Create ad request with family-friendly targeting for seniors
     final adRequest = const AdRequest(
@@ -86,8 +96,11 @@ class AdService {
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (InterstitialAd ad) {
           // Ad loaded successfully
+          print('✅ Ad loaded successfully!');
           _interstitialAd = ad;
           _isAdReady = true;
+          _isLoadingAd = false;
+          _consecutiveFailures = 0; // Reset failure counter on success
           
           // Set up ad event callbacks
           _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
@@ -96,28 +109,42 @@ class AdService {
             },
             onAdDismissedFullScreenContent: (InterstitialAd ad) {
               // User dismissed the ad, dispose and load next ad
+              print('👋 Ad dismissed by user');
               ad.dispose();
               _interstitialAd = null;
               _isAdReady = false;
-              _loadInterstitialAd(); // Preload next ad
+              _isLoadingAd = false;
+              // Immediately start loading next ad
+              _loadInterstitialAd();
             },
             onAdFailedToShowFullScreenContent: (InterstitialAd ad, AdError error) {
               // Ad failed to show
+              print('❌ Ad failed to show: ${error.message}');
               ad.dispose();
               _interstitialAd = null;
               _isAdReady = false;
-              _loadInterstitialAd(); // Try to load another ad
+              _isLoadingAd = false;
+              // Try to load another ad immediately
+              _loadInterstitialAd();
             },
           );
         },
         onAdFailedToLoad: (LoadAdError error) {
           // Ad failed to load - this is normal and happens sometimes
+          print('❌ Ad failed to load: ${error.message} (Code: ${error.code})');
           _interstitialAd = null;
           _isAdReady = false;
+          _isLoadingAd = false;
+          _consecutiveFailures++;
           
-          // Retry loading after a delay (exponential backoff would be better for production)
-          Future.delayed(const Duration(seconds: 30), () {
-            _loadInterstitialAd();
+          // Exponential backoff: 2s, 4s, 8s, 16s, max 30s
+          int retryDelay = (2 * (1 << (_consecutiveFailures - 1))).clamp(2, 30);
+          print('⏳ Retrying ad load in $retryDelay seconds (failure #$_consecutiveFailures)');
+          
+          Future.delayed(Duration(seconds: retryDelay), () {
+            if (!_isAdReady && _adsEnabled) {
+              _loadInterstitialAd();
+            }
           });
         },
       ),
@@ -156,9 +183,17 @@ class AdService {
       _queryCount = 0;
       await _saveQueryCount();
       
+      print('📺 Showing ad now!');
       // Show the ad
       await _interstitialAd!.show();
       return true; // Ad was shown
+    } else {
+      // Ad not ready - try to load one if not already loading
+      print('⚠️ Ad not ready to show (isReady: $_isAdReady, ad exists: ${_interstitialAd != null}, loading: $_isLoadingAd)');
+      if (!_isLoadingAd && !_isAdReady) {
+        print('🔄 Attempting to load ad now since none is ready');
+        _loadInterstitialAd();
+      }
     }
     
     return false; // Ad not ready or not available
@@ -206,8 +241,13 @@ class AdService {
 
   /// Manually trigger ad loading (useful for preloading)
   Future<void> preloadAd() async {
-    if (!_isAdReady && _adsEnabled) {
+    if (!_isAdReady && !_isLoadingAd && _adsEnabled) {
       await _loadInterstitialAd();
     }
+  }
+  
+  /// Get diagnostic info about ad status (for debugging)
+  String getAdStatus() {
+    return 'Ad Status: Ready=$_isAdReady, Loading=$_isLoadingAd, Failures=$_consecutiveFailures, QueryCount=$_queryCount';
   }
 }

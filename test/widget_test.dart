@@ -11,9 +11,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:senior_assist/main.dart';
 
 void main() {
-  testWidgets('Senior Assist app smoke test', (WidgetTester tester) async {
+  testWidgets('Pebl app smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const SeniorAssistApp());
+    await tester.pumpWidget(const PeblApp());
 
     // Verify that the app loads without crashing
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
