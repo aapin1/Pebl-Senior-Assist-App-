@@ -9,7 +9,7 @@ class AccessibilityService extends ChangeNotifier {
   AccessibilityService._internal();
 
   // Default values
-  double _textSizeMultiplier = 1.4; // Default to Large for seniors
+  double _textSizeMultiplier = 1.6; // Default to Large for seniors
   bool _audioPlayback = true;
   bool _hasCompletedOnboarding = false;
   bool _hasCompletedAccessibilitySetup = false;
@@ -39,7 +39,7 @@ class AccessibilityService extends ChangeNotifier {
   Future<void> initialize() async {
     _prefs = await SharedPreferences.getInstance();
     
-    _textSizeMultiplier = _prefs!.getDouble(_textSizeKey) ?? 1.4;
+    _textSizeMultiplier = _prefs!.getDouble(_textSizeKey) ?? 1.6;
     _audioPlayback = _prefs!.getBool(_audioPlaybackKey) ?? true;
     _hasCompletedOnboarding = _prefs!.getBool(_onboardingKey) ?? false;
     _hasCompletedAccessibilitySetup = _prefs!.getBool(_accessibilitySetupKey) ?? false;
@@ -47,7 +47,7 @@ class AccessibilityService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Set text size multiplier (1.2 = large, 1.4 = extra large, 1.6 = extra extra large)
+  /// Set text size multiplier (1.4 = medium, 1.6 = large, 1.85 = extra large)
   Future<void> setTextSizeMultiplier(double multiplier) async {
     _textSizeMultiplier = multiplier;
     await _prefs?.setDouble(_textSizeKey, multiplier);

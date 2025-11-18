@@ -9,6 +9,7 @@ import '../services/accessibility_service.dart';
 import 'demo_screen.dart';
 import 'accessibility_setup_screen.dart';
 import 'question_screen.dart';
+import 'medicine_screen.dart';
 
 /// Home screen of the Pebl app
 /// Contains the main title and Ask a Question button
@@ -109,63 +110,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       
                       const SizedBox(height: 16),
                       
-                      // Main Ask Question Button
+                      // Main Menu - Two Options
                       Expanded(
                         flex: 3,
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16.0),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.95),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: Colors.blue.shade300,
-                              width: 2,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.blue.shade200.withOpacity(0.3),
-                                blurRadius: 15,
-                                offset: const Offset(0, 8),
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: SingleChildScrollView(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                            Icon(
-                              Icons.mic,
-                              size: 40,
-                              color: Colors.blue.shade600,
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              'Ask Me Anything!',
-                              style: TextStyle(
-                                fontSize: 18 * _accessibilityService.textSizeMultiplier,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blue.shade800,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Get help with your phone, apps, or tech questions',
-                              style: TextStyle(
-                                fontSize: 12 * _accessibilityService.textSizeMultiplier,
-                                color: Colors.grey.shade600,
-                              ),
-                              textAlign: TextAlign.center,
-                              maxLines: 3,
-                              overflow: TextOverflow.visible,
-                            ),
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                onPressed: () async {
+                        child: Column(
+                          children: [
+                            // Ask a Question Option - Entire card is tappable
+                            Expanded(
+                              child: InkWell(
+                                onTap: () async {
                                   // Show disclaimer dialog EVERY time before entering question screen
                                   await AdDisclaimerDialog.showAlways(
                                     context: context,
@@ -186,165 +139,247 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                     },
                                   );
                                 },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue.shade600,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(15),
+                                borderRadius: BorderRadius.circular(20),
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.95),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: Colors.blue.shade300,
+                                      width: 2,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.blue.shade200.withOpacity(0.3),
+                                        blurRadius: 15,
+                                        offset: const Offset(0, 8),
+                                      ),
+                                    ],
                                   ),
-                                  elevation: 3,
-                                ),
-                                icon: const Icon(Icons.help_outline, size: 24),
-                                label: Text(
-                                  'Ask a Question',
-                                  style: TextStyle(
-                                    fontSize: 18 * _accessibilityService.textSizeMultiplier,
-                                    fontWeight: FontWeight.w600,
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.mic,
+                                        size: 36,
+                                        color: Colors.blue.shade600,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Ask Me Anything!',
+                                        style: TextStyle(
+                                          fontSize: 18 * _accessibilityService.textSizeMultiplier,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.blue.shade800,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        'Get help with tech',
+                                        style: TextStyle(
+                                          fontSize: 13 * _accessibilityService.textSizeMultiplier,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
                             ),
-                                ],
+                            
+                            const SizedBox(height: 12),
+                            
+                            // Manage Medicines Option - Entire card is tappable
+                            Expanded(
+                              child: InkWell(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => MedicineScreen(
+                                        accessibilityService: _accessibilityService,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                borderRadius: BorderRadius.circular(20),
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.95),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: Colors.purple.shade300,
+                                      width: 2,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.purple.shade200.withOpacity(0.3),
+                                        blurRadius: 15,
+                                        offset: const Offset(0, 8),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.medication,
+                                        size: 36,
+                                        color: Colors.purple.shade600,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Manage Medicines',
+                                        style: TextStyle(
+                                          fontSize: 18 * _accessibilityService.textSizeMultiplier,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.purple.shade800,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        'Track medications',
+                                        style: TextStyle(
+                                          fontSize: 13 * _accessibilityService.textSizeMultiplier,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
+                          ],
                         ),
                       ),
                       
                       const SizedBox(height: 12),
                       
-                      // Additional Options
+                      // Additional Options - Settings and Demo as tappable cards
                       Row(
                         children: [
+                          // Settings button - entire card is tappable
                           Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.9),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: Colors.green.shade300,
-                                  width: 1.5,
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const AccessibilitySetupScreen(),
+                                  ),
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(16),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.9),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: Colors.green.shade300,
+                                    width: 1.5,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.green.shade200.withOpacity(0.3),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
                                 ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.green.shade200.withOpacity(0.3),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                children: [
-                                  Icon(
-                                    Icons.settings,
-                                    size: 28,
-                                    color: Colors.green.shade600,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Settings',
-                                    style: TextStyle(
-                                      fontSize: 14 * _accessibilityService.textSizeMultiplier,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.green.shade700,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.settings,
+                                      size: 32,
+                                      color: Colors.green.shade600,
                                     ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 6),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => const AccessibilitySetupScreen(),
-                                        ),
-                                      );
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.green.shade600,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      'Change',
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Settings',
                                       style: TextStyle(
-                                        fontSize: 12 * _accessibilityService.textSizeMultiplier,
-                                        fontWeight: FontWeight.w600,
+                                        fontSize: 15 * _accessibilityService.textSizeMultiplier,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.green.shade700,
                                       ),
+                                      textAlign: TextAlign.center,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                           ),
                           const SizedBox(width: 16),
+                          // Demo button - entire card is tappable
                           Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.9),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: Colors.orange.shade300,
-                                  width: 1.5,
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const DemoScreen(),
+                                  ),
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(16),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.9),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: Colors.orange.shade300,
+                                    width: 1.5,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.orange.shade200.withOpacity(0.3),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
                                 ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.orange.shade200.withOpacity(0.3),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                children: [
-                                  Icon(
-                                    Icons.school,
-                                    size: 28,
-                                    color: Colors.orange.shade600,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Demo',
-                                    style: TextStyle(
-                                      fontSize: 14 * _accessibilityService.textSizeMultiplier,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.orange.shade700,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.school,
+                                      size: 32,
+                                      color: Colors.orange.shade600,
                                     ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 6),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => const DemoScreen(),
-                                        ),
-                                      );
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.orange.shade600,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      'Try Demo',
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Demo',
                                       style: TextStyle(
-                                        fontSize: 12 * _accessibilityService.textSizeMultiplier,
-                                        fontWeight: FontWeight.w600,
+                                        fontSize: 15 * _accessibilityService.textSizeMultiplier,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.orange.shade700,
                                       ),
+                                      textAlign: TextAlign.center,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                           ),

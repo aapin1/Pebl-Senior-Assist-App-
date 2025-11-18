@@ -186,11 +186,11 @@ class _AccessibilitySetupScreenState extends State<AccessibilitySetupScreen> {
             // Text size buttons
             Column(
               children: [
-                _buildTextSizeButton('Medium', 1.2),
+                _buildTextSizeButton('Medium', 1.4),
                 const SizedBox(height: 12),
-                _buildTextSizeButton('Large', 1.4),
+                _buildTextSizeButton('Large', 1.6),
                 const SizedBox(height: 12),
-                _buildTextSizeButton('Extra Large', 1.6),
+                _buildTextSizeButton('Extra Large', 1.85),
               ],
             ),
           ],
