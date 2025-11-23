@@ -31,10 +31,7 @@ class _AddEditMedicineScreenState extends State<AddEditMedicineScreen> {
   // Text controllers for form fields
   late TextEditingController _nameController;
   late TextEditingController _dosageController;
-  late TextEditingController _doctorNameController;
-  late TextEditingController _doctorPhoneController;
   late TextEditingController _notesController;
-  late TextEditingController _familyContactController;
   
   // Selected times to take medicine
   final Set<String> _selectedTimes = {};
@@ -52,10 +49,7 @@ class _AddEditMedicineScreenState extends State<AddEditMedicineScreen> {
     // Initialize controllers with existing data if editing
     _nameController = TextEditingController(text: widget.medicine?.name ?? '');
     _dosageController = TextEditingController(text: widget.medicine?.dosage ?? '');
-    _doctorNameController = TextEditingController(text: widget.medicine?.doctorName ?? '');
-    _doctorPhoneController = TextEditingController(text: widget.medicine?.doctorPhone ?? '');
     _notesController = TextEditingController(text: widget.medicine?.notes ?? '');
-    _familyContactController = TextEditingController(text: widget.medicine?.familyContact ?? '');
     
     // Initialize selected times if editing
     if (widget.medicine != null) {
@@ -68,10 +62,7 @@ class _AddEditMedicineScreenState extends State<AddEditMedicineScreen> {
     // Clean up controllers
     _nameController.dispose();
     _dosageController.dispose();
-    _doctorNameController.dispose();
-    _doctorPhoneController.dispose();
     _notesController.dispose();
-    _familyContactController.dispose();
     super.dispose();
   }
   
@@ -100,17 +91,10 @@ class _AddEditMedicineScreenState extends State<AddEditMedicineScreen> {
         id: widget.medicine?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
         name: _nameController.text.trim(),
         dosage: _dosageController.text.trim(),
-        doctorName: _doctorNameController.text.trim(),
-        doctorPhone: _doctorPhoneController.text.trim().isEmpty 
-            ? null 
-            : _doctorPhoneController.text.trim(),
         timesToTake: _selectedTimes.toList(),
         notes: _notesController.text.trim().isEmpty 
             ? null 
             : _notesController.text.trim(),
-        familyContact: _familyContactController.text.trim().isEmpty 
-            ? null 
-            : _familyContactController.text.trim(),
         createdAt: widget.medicine?.createdAt ?? DateTime.now(),
       );
       
@@ -253,33 +237,6 @@ class _AddEditMedicineScreenState extends State<AddEditMedicineScreen> {
                             
                             SizedBox(height: screenHeight * 0.025),
                             
-                            // Doctor Name field
-                            _buildTextField(
-                              controller: _doctorNameController,
-                              label: 'Doctor Name',
-                              hint: 'e.g., Smith',
-                              icon: Icons.person,
-                              required: true,
-                              baseTextSize: baseTextSize,
-                              screenHeight: screenHeight,
-                            ),
-                            
-                            SizedBox(height: screenHeight * 0.018),
-                            
-                            // Doctor Phone field (optional)
-                            _buildTextField(
-                              controller: _doctorPhoneController,
-                              label: 'Doctor Phone (Optional)',
-                              hint: 'e.g., (555) 123-4567',
-                              icon: Icons.phone,
-                              required: false,
-                              keyboardType: TextInputType.phone,
-                              baseTextSize: baseTextSize,
-                              screenHeight: screenHeight,
-                            ),
-                            
-                            SizedBox(height: screenHeight * 0.025),
-                            
                             // When to take section
                             Container(
                               padding: EdgeInsets.all(screenWidth * 0.03),
@@ -367,19 +324,6 @@ class _AddEditMedicineScreenState extends State<AddEditMedicineScreen> {
                               icon: Icons.note,
                               required: false,
                               maxLines: 3,
-                              baseTextSize: baseTextSize,
-                              screenHeight: screenHeight,
-                            ),
-                            
-                            SizedBox(height: screenHeight * 0.02),
-                            
-                            // Family Contact field (optional)
-                            _buildTextField(
-                              controller: _familyContactController,
-                              label: 'Family Contact (Optional)',
-                              hint: 'e.g., John (555) 987-6543',
-                              icon: Icons.family_restroom,
-                              required: false,
                               baseTextSize: baseTextSize,
                               screenHeight: screenHeight,
                             ),

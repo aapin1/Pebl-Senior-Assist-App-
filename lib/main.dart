@@ -92,8 +92,15 @@ class _PeblAppState extends State<PeblApp> {
   }
 
   Widget _getInitialScreen() {
-    // Go directly to home screen - no setup required
-    // Users can change settings anytime from the Settings button
+    // Check if user has completed accessibility setup
+    // First launch: Show accessibility setup -> then ad disclaimer -> then home
+    // Subsequent launches: Go directly to home screen
+    if (!_accessibilityService.hasCompletedAccessibilitySetup) {
+      return const WelcomeScreen();
+    }
+    
+    // User has completed setup, go to home screen
+    // Ad disclaimer will show automatically on home screen if not seen yet
     return const HomeScreen();
   }
 }

@@ -373,32 +373,7 @@ class _MedicineScreenState extends State<MedicineScreen> {
               ],
             ),
             
-            SizedBox(height: screenHeight * 0.01),
-            
-            // Doctor name
-            Row(
-              children: [
-                Icon(
-                  Icons.person,
-                  size: screenHeight * 0.025,
-                  color: Colors.blue.shade600,
-                ),
-                SizedBox(width: screenWidth * 0.02),
-                Expanded(
-                  child: Text(
-                    'Dr. ${medicine.doctorName}',
-                    style: TextStyle(
-                      fontSize: baseTextSize * 0.8 * widget.accessibilityService.textSizeMultiplier,
-                      color: Colors.grey.shade700,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            
-            SizedBox(height: screenHeight * 0.01),
+            SizedBox(height: screenHeight * 0.015),
             
             // Times to take
             Row(

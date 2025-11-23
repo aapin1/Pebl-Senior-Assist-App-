@@ -22,6 +22,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    // Show ad disclaimer only on first launch (after accessibility setup)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showAdDisclaimerIfNeeded();
+    });
+  }
+  
+  /// Show ad disclaimer only once on first launch
+  Future<void> _showAdDisclaimerIfNeeded() async {
+    // Check if disclaimer has been shown before
+    final hasBeenShown = await AdDisclaimerDialog.hasBeenShown();
+    
+    // Only show if not shown before
+    if (!hasBeenShown && mounted) {
+      await AdDisclaimerDialog.showAlways(
+        context: context,
+        accessibilityService: _accessibilityService,
+        onContinue: () {
+          // Disclaimer acknowledged, user can now use the app
+        },
+      );
+    }
   }
 
   @override
@@ -136,23 +157,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           // Ask a Question Option - Entire card is tappable
                           Expanded(
                             child: InkWell(
-                              onTap: () async {
-                                // Show disclaimer dialog EVERY time before entering question screen
-                                await AdDisclaimerDialog.showAlways(
-                                  context: context,
-                                  accessibilityService: _accessibilityService,
-                                  onContinue: () {
-                                    if (context.mounted) {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => QuestionScreen(
-                                            accessibilityService: _accessibilityService,
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                  },
+                              onTap: () {
+                                // Navigate directly to question screen
+                                // Ad disclaimer already shown on first launch
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => QuestionScreen(
+                                      accessibilityService: _accessibilityService,
+                                    ),
+                                  ),
                                 );
                               },
                               borderRadius: BorderRadius.circular(20),
