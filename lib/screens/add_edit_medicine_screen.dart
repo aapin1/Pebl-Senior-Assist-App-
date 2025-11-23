@@ -238,7 +238,7 @@ class _AddEditMedicineScreenState extends State<AddEditMedicineScreen> {
                               screenHeight: screenHeight,
                             ),
                             
-                            SizedBox(height: screenHeight * 0.02),
+                            SizedBox(height: screenHeight * 0.018),
                             
                             // Dosage field
                             _buildTextField(
@@ -251,7 +251,7 @@ class _AddEditMedicineScreenState extends State<AddEditMedicineScreen> {
                               screenHeight: screenHeight,
                             ),
                             
-                            SizedBox(height: screenHeight * 0.02),
+                            SizedBox(height: screenHeight * 0.025),
                             
                             // Doctor Name field
                             _buildTextField(
@@ -264,7 +264,7 @@ class _AddEditMedicineScreenState extends State<AddEditMedicineScreen> {
                               screenHeight: screenHeight,
                             ),
                             
-                            SizedBox(height: screenHeight * 0.02),
+                            SizedBox(height: screenHeight * 0.018),
                             
                             // Doctor Phone field (optional)
                             _buildTextField(
@@ -278,48 +278,83 @@ class _AddEditMedicineScreenState extends State<AddEditMedicineScreen> {
                               screenHeight: screenHeight,
                             ),
                             
-                            SizedBox(height: screenHeight * 0.02),
+                            SizedBox(height: screenHeight * 0.025),
                             
                             // When to take section
-                            Text(
-                              'When to Take',
-                              style: TextStyle(
-                                fontSize: baseTextSize * 0.9 * widget.accessibilityService.textSizeMultiplier,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blue.shade800,
+                            Container(
+                              padding: EdgeInsets.all(screenWidth * 0.03),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.7),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Colors.blue.shade200,
+                                  width: 1.5,
+                                ),
                               ),
-                            ),
-                            
-                            SizedBox(height: screenHeight * 0.01),
-                            
-                            // Time selection chips
-                            Wrap(
-                              spacing: screenWidth * 0.02,
-                              runSpacing: screenHeight * 0.01,
-                              children: _timeOptions.map((time) {
-                                final isSelected = _selectedTimes.contains(time);
-                                return FilterChip(
-                                  label: Text(
-                                    time,
-                                    style: TextStyle(
-                                      fontSize: baseTextSize * 0.85 * widget.accessibilityService.textSizeMultiplier,
-                                      color: isSelected ? Colors.white : Colors.blue.shade700,
-                                    ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.schedule,
+                                        size: screenHeight * 0.025,
+                                        color: Colors.blue.shade600,
+                                      ),
+                                      SizedBox(width: screenWidth * 0.02),
+                                      Text(
+                                        'When to Take',
+                                        style: TextStyle(
+                                          fontSize: baseTextSize * 0.9 * widget.accessibilityService.textSizeMultiplier,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.blue.shade800,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  selected: isSelected,
-                                  onSelected: (selected) {
-                                    setState(() {
-                                      if (selected) {
-                                        _selectedTimes.add(time);
-                                      } else {
-                                        _selectedTimes.remove(time);
-                                      }
-                                    });
-                                  },
-                                  selectedColor: Colors.blue.shade600,
-                                  checkmarkColor: Colors.white,
-                                );
-                              }).toList(),
+                                  
+                                  SizedBox(height: screenHeight * 0.012),
+                                  
+                                  // Time selection chips
+                                  Wrap(
+                                    spacing: screenWidth * 0.02,
+                                    runSpacing: screenHeight * 0.01,
+                                    children: _timeOptions.map((time) {
+                                      final isSelected = _selectedTimes.contains(time);
+                                      return ChoiceChip(
+                                        label: Text(
+                                          time,
+                                          style: TextStyle(
+                                            fontSize: baseTextSize * 0.85 * widget.accessibilityService.textSizeMultiplier,
+                                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                            color: isSelected ? Colors.white : Colors.blue.shade700,
+                                          ),
+                                        ),
+                                        selected: isSelected,
+                                        onSelected: (selected) {
+                                          setState(() {
+                                            if (selected) {
+                                              _selectedTimes.add(time);
+                                            } else {
+                                              _selectedTimes.remove(time);
+                                            }
+                                          });
+                                        },
+                                        selectedColor: Colors.blue.shade600,
+                                        backgroundColor: Colors.white,
+                                        side: BorderSide(
+                                          color: isSelected ? Colors.blue.shade600 : Colors.blue.shade300,
+                                          width: 1.5,
+                                        ),
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: screenWidth * 0.03,
+                                          vertical: screenHeight * 0.01,
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                ],
+                              ),
                             ),
                             
                             SizedBox(height: screenHeight * 0.02),
@@ -406,32 +441,58 @@ class _AddEditMedicineScreenState extends State<AddEditMedicineScreen> {
       controller: controller,
       keyboardType: keyboardType,
       maxLines: maxLines,
+      minLines: maxLines > 1 ? 3 : 1,
       style: TextStyle(
         fontSize: baseTextSize * 0.9 * widget.accessibilityService.textSizeMultiplier,
+        height: 1.3,
       ),
       decoration: InputDecoration(
         labelText: label,
+        labelStyle: TextStyle(
+          fontSize: baseTextSize * 0.85 * widget.accessibilityService.textSizeMultiplier,
+          color: Colors.blue.shade700,
+        ),
         hintText: hint,
-        prefixIcon: Icon(icon, size: screenHeight * 0.03),
+        hintStyle: TextStyle(
+          fontSize: baseTextSize * 0.8 * widget.accessibilityService.textSizeMultiplier,
+          color: Colors.grey.shade400,
+        ),
+        prefixIcon: Icon(
+          icon, 
+          size: screenHeight * 0.028,
+          color: Colors.blue.shade600,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.blue.shade300),
+          borderSide: BorderSide(color: Colors.blue.shade300, width: 1.5),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.blue.shade300),
+          borderSide: BorderSide(color: Colors.blue.shade300, width: 1.5),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: Colors.blue.shade600, width: 2),
         ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.red.shade400, width: 1.5),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.red.shade600, width: 2),
+        ),
         filled: true,
-        fillColor: Colors.white.withOpacity(0.9),
+        fillColor: Colors.white.withOpacity(0.95),
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: screenHeight * 0.02,
+          vertical: screenHeight * 0.018,
+        ),
       ),
       validator: required
           ? (value) {
               if (value == null || value.trim().isEmpty) {
-                return 'This field is required';
+                return 'Required';
               }
               return null;
             }
