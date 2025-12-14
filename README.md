@@ -8,6 +8,7 @@ A cross-platform Flutter application designed specifically for senior users with
 - **Simple Interface**: Clean, uncluttered design with intuitive navigation
 - **Voice Interaction**: Large microphone button for easy voice input
 - **Cross-Platform**: Runs on both iOS and Android devices
+ - **Local Medicine Reminders**: On-device notifications to remind users when to take their medicines
 
 ## Project Structure
 
@@ -63,6 +64,8 @@ lib/
 - Tap the microphone button to activate "listening" mode
 - Visual feedback shows "Listening..." text
 - Auto-stops after 3 seconds (placeholder behavior)
+- Add, edit, and delete medicines stored locally on the device
+- Pick exact reminder times for each medicine and receive daily local notifications at those times
 
 ## Future Expansion
 

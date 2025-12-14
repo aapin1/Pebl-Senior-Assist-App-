@@ -33,11 +33,12 @@ class _AddEditMedicineScreenState extends State<AddEditMedicineScreen> {
   late TextEditingController _dosageController;
   late TextEditingController _notesController;
   
-  // Selected times to take medicine
-  final Set<String> _selectedTimes = {};
-  
-  // Available time options
-  final List<String> _timeOptions = ['Morning', 'Afternoon', 'Evening', 'Bedtime'];
+  // List of exact reminder times for this medicine
+  // Routine comment: Each TimeOfDay represents one daily reminder time
+  final List<TimeOfDay> _reminderTimes = [];
+
+  // Whether reminders are enabled for this medicine
+  bool _remindersEnabled = false;
   
   // Saving state
   bool _isSaving = false;
@@ -51,9 +52,22 @@ class _AddEditMedicineScreenState extends State<AddEditMedicineScreen> {
     _dosageController = TextEditingController(text: widget.medicine?.dosage ?? '');
     _notesController = TextEditingController(text: widget.medicine?.notes ?? '');
     
-    // Initialize selected times if editing
+    // Initialize reminder times and toggle if editing an existing medicine
     if (widget.medicine != null) {
-      _selectedTimes.addAll(widget.medicine!.timesToTake);
+      // Routine comment: Try to parse stored timesToTake (HH:mm) into TimeOfDay objects
+      for (final timeString in widget.medicine!.timesToTake) {
+        final parts = timeString.split(':');
+        if (parts.length == 2) {
+          final hour = int.tryParse(parts[0]);
+          final minute = int.tryParse(parts[1]);
+          if (hour != null && minute != null) {
+            _reminderTimes.add(TimeOfDay(hour: hour, minute: minute));
+          }
+        }
+      }
+
+      // Routine comment: Initialize reminders toggle from existing medicine
+      _remindersEnabled = widget.medicine!.remindersEnabled;
     }
   }
   
@@ -73,10 +87,10 @@ class _AddEditMedicineScreenState extends State<AddEditMedicineScreen> {
       return;
     }
     
-    // Check at least one time is selected
-    if (_selectedTimes.isEmpty) {
+    // Routine comment: If reminders are enabled, ensure at least one reminder time exists
+    if (_remindersEnabled && _reminderTimes.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select at least one time to take medicine')),
+        const SnackBar(content: Text('Please add at least one reminder time or turn off reminders')),
       );
       return;
     }
@@ -86,16 +100,37 @@ class _AddEditMedicineScreenState extends State<AddEditMedicineScreen> {
     });
     
     try {
+      // Routine comment: Build list and map of times in HH:mm format for storage and notifications
+      final List<String> timesToTake = [];
+      final Map<String, String> timesToTakeDetails = {};
+      for (var i = 0; i < _reminderTimes.length; i++) {
+        final timeOfDay = _reminderTimes[i];
+        final hour = timeOfDay.hour.toString().padLeft(2, '0');
+        final minute = timeOfDay.minute.toString().padLeft(2, '0');
+        final value = '$hour:$minute';
+        timesToTake.add(value);
+        timesToTakeDetails['time_$i'] = value;
+      }
+
+      // Routine comment: Ensure dosage always includes 'mg' suffix for display
+      String normalizedDosage = _dosageController.text.trim();
+      if (normalizedDosage.isNotEmpty &&
+          !normalizedDosage.toLowerCase().contains('mg')) {
+        normalizedDosage = '$normalizedDosage mg';
+      }
+
       // Create medicine object
       final medicine = Medicine(
         id: widget.medicine?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
         name: _nameController.text.trim(),
-        dosage: _dosageController.text.trim(),
-        timesToTake: _selectedTimes.toList(),
+        dosage: normalizedDosage,
+        timesToTake: timesToTake,
         notes: _notesController.text.trim().isEmpty 
             ? null 
             : _notesController.text.trim(),
         createdAt: widget.medicine?.createdAt ?? DateTime.now(),
+        timesToTakeDetails: timesToTakeDetails,
+        remindersEnabled: _remindersEnabled,
       );
       
       // Save or update medicine
@@ -113,11 +148,16 @@ class _AddEditMedicineScreenState extends State<AddEditMedicineScreen> {
         Navigator.pop(context);
         
         // Show success message
+        // Routine comment: Use floating SnackBar so it does not cover bottom button
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(widget.medicine == null 
-                ? 'Medicine added successfully' 
-                : 'Medicine updated successfully'),
+            content: Text(
+              widget.medicine == null 
+                  ? 'Medicine added successfully' 
+                  : 'Medicine updated successfully',
+            ),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 80),
           ),
         );
       }
@@ -237,7 +277,7 @@ class _AddEditMedicineScreenState extends State<AddEditMedicineScreen> {
                             
                             SizedBox(height: screenHeight * 0.025),
                             
-                            // When to take section
+                            // Reminder times section
                             Container(
                               padding: EdgeInsets.all(screenWidth * 0.03),
                               decoration: BoxDecoration(
@@ -251,6 +291,7 @@ class _AddEditMedicineScreenState extends State<AddEditMedicineScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
+                                  // Routine comment: Single header row with icon, label, and switch
                                   Row(
                                     children: [
                                       Icon(
@@ -259,57 +300,175 @@ class _AddEditMedicineScreenState extends State<AddEditMedicineScreen> {
                                         color: Colors.blue.shade600,
                                       ),
                                       SizedBox(width: screenWidth * 0.02),
-                                      Text(
-                                        'When to Take',
-                                        style: TextStyle(
-                                          fontSize: baseTextSize * 0.9 * widget.accessibilityService.textSizeMultiplier,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.blue.shade800,
+                                      Expanded(
+                                        child: Text(
+                                          'Pick times for reminders',
+                                          style: TextStyle(
+                                            fontSize: baseTextSize * 0.9 * widget.accessibilityService.textSizeMultiplier,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.blue.shade800,
+                                          ),
+                                          // Routine comment: Allow wrapping instead of ellipsis so full phrase is visible
+                                          maxLines: 2,
+                                          overflow: TextOverflow.visible,
+                                          softWrap: true,
                                         ),
+                                      ),
+                                      Switch(
+                                        value: _remindersEnabled,
+                                        onChanged: (value) {
+                                          setState(() {
+                                            _remindersEnabled = value;
+                                          });
+                                        },
                                       ),
                                     ],
                                   ),
-                                  
-                                  SizedBox(height: screenHeight * 0.012),
-                                  
-                                  // Time selection chips
-                                  Wrap(
-                                    spacing: screenWidth * 0.02,
-                                    runSpacing: screenHeight * 0.01,
-                                    children: _timeOptions.map((time) {
-                                      final isSelected = _selectedTimes.contains(time);
-                                      return ChoiceChip(
-                                        label: Text(
-                                          time,
-                                          style: TextStyle(
-                                            fontSize: baseTextSize * 0.85 * widget.accessibilityService.textSizeMultiplier,
-                                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                            color: isSelected ? Colors.white : Colors.blue.shade700,
+
+                                  SizedBox(height: screenHeight * 0.008),
+
+                                  // Routine comment: Show reminder times only when reminders are enabled
+                                  if (_remindersEnabled)
+                                    Column(
+                                      children: [
+                                        // List of existing reminder time rows
+                                        ..._reminderTimes.asMap().entries.map((entry) {
+                                          final index = entry.key;
+                                          final timeOfDay = entry.value;
+                                          final timeText = timeOfDay.format(context);
+                                          return Padding(
+                                            padding: EdgeInsets.only(top: screenHeight * 0.006),
+                                            child: Container(
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: screenWidth * 0.03,
+                                                vertical: screenHeight * 0.008,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius: BorderRadius.circular(10),
+                                                border: Border.all(
+                                                  color: Colors.blue.shade100,
+                                                  width: 1,
+                                                ),
+                                              ),
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Row(
+                                                    children: [
+                                                      Icon(
+                                                        Icons.access_time,
+                                                        size: screenHeight * 0.022,
+                                                        color: Colors.blue.shade600,
+                                                      ),
+                                                      SizedBox(width: screenWidth * 0.02),
+                                                      // Routine comment: Label stays short to avoid wrapping
+                                                      Text(
+                                                        'Reminder ${index + 1}',
+                                                        style: TextStyle(
+                                                          fontSize: baseTextSize * 0.85 * widget.accessibilityService.textSizeMultiplier,
+                                                          color: Colors.grey.shade800,
+                                                          fontWeight: FontWeight.w500,
+                                                        ),
+                                                      ),
+                                                      const Spacer(),
+                                                      // Delete reminder time button
+                                                      IconButton(
+                                                        icon: Icon(
+                                                          Icons.delete_outline,
+                                                          size: screenHeight * 0.024,
+                                                          color: Colors.red.shade400,
+                                                        ),
+                                                        onPressed: () {
+                                                          setState(() {
+                                                            _reminderTimes.removeAt(index);
+                                                          });
+                                                        },
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  SizedBox(height: screenHeight * 0.004),
+                                                  // Routine comment: Time button in its own row, right-aligned, to avoid overflow
+                                                  Align(
+                                                    alignment: Alignment.centerRight,
+                                                    child: FittedBox(
+                                                      fit: BoxFit.scaleDown,
+                                                      child: TextButton(
+                                                        onPressed: () async {
+                                                          final picked = await showTimePicker(
+                                                            context: context,
+                                                            initialTime: timeOfDay,
+                                                          );
+                                                          if (picked != null) {
+                                                            setState(() {
+                                                              _reminderTimes[index] = picked;
+                                                            });
+                                                          }
+                                                        },
+                                                        style: TextButton.styleFrom(
+                                                          foregroundColor: Colors.blue.shade700,
+                                                          padding: EdgeInsets.symmetric(
+                                                            horizontal: screenWidth * 0.008,
+                                                          ),
+                                                        ),
+                                                        child: Text(
+                                                          timeText,
+                                                          style: TextStyle(
+                                                            // Routine comment: Slightly smaller font so numbers do not touch
+                                                            fontSize: baseTextSize * 0.76 * widget.accessibilityService.textSizeMultiplier,
+                                                          ),
+                                                          maxLines: 1,
+                                                          overflow: TextOverflow.ellipsis,
+                                                          softWrap: false,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        }).toList(),
+
+                                        SizedBox(height: screenHeight * 0.01),
+
+                                        // Add new reminder time button
+                                        Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: TextButton.icon(
+                                            onPressed: () async {
+                                              // Routine comment: Default initial time is 9:00 AM
+                                              final initialTime = _reminderTimes.isNotEmpty
+                                                  ? _reminderTimes.last
+                                                  : const TimeOfDay(hour: 9, minute: 0);
+                                              final picked = await showTimePicker(
+                                                context: context,
+                                                initialTime: initialTime,
+                                              );
+                                              if (picked != null) {
+                                                setState(() {
+                                                  _reminderTimes.add(picked);
+                                                });
+                                              }
+                                            },
+                                            icon: Icon(
+                                              Icons.add_circle_outline,
+                                              size: screenHeight * 0.024,
+                                              color: Colors.blue.shade600,
+                                            ),
+                                            label: Text(
+                                              'Add time',
+                                              style: TextStyle(
+                                                fontSize: baseTextSize * 0.85 * widget.accessibilityService.textSizeMultiplier,
+                                                color: Colors.blue.shade700,
+                                              ),
+                                            ),
                                           ),
                                         ),
-                                        selected: isSelected,
-                                        onSelected: (selected) {
-                                          setState(() {
-                                            if (selected) {
-                                              _selectedTimes.add(time);
-                                            } else {
-                                              _selectedTimes.remove(time);
-                                            }
-                                          });
-                                        },
-                                        selectedColor: Colors.blue.shade600,
-                                        backgroundColor: Colors.white,
-                                        side: BorderSide(
-                                          color: isSelected ? Colors.blue.shade600 : Colors.blue.shade300,
-                                          width: 1.5,
-                                        ),
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: screenWidth * 0.03,
-                                          vertical: screenHeight * 0.01,
-                                        ),
-                                      );
-                                    }).toList(),
-                                  ),
+                                      ],
+                                    ),
+
+                                  // Routine comment: No extra helper text when reminders are off to keep UI clean
                                 ],
                               ),
                             ),

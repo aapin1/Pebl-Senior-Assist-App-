@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/accessibility_service.dart';
 import '../services/medicine_storage_service.dart';
+import '../services/notification_service.dart';
 import '../models/medicine.dart';
 import 'add_edit_medicine_screen.dart';
 
@@ -22,6 +23,9 @@ class MedicineScreen extends StatefulWidget {
 class _MedicineScreenState extends State<MedicineScreen> {
   // Storage service for medicines
   final MedicineStorageService _storageService = MedicineStorageService();
+
+  // Notification service for scheduling local reminders
+  final NotificationService _notificationService = NotificationService();
   
   // List of medicines loaded from storage
   List<Medicine> _medicines = [];
@@ -34,6 +38,46 @@ class _MedicineScreenState extends State<MedicineScreen> {
     super.initState();
     // Load medicines when screen opens
     _loadMedicines();
+  }
+
+  /// Build a human-readable description of when to take the medicine
+  /// Routine comment: Converts stored HH:mm values into localized times
+  String _buildTimesDescription(BuildContext context, Medicine medicine) {
+    // If no times stored, return a simple placeholder
+    if (medicine.timesToTake.isEmpty) {
+      return 'No reminder times set';
+    }
+
+    // Determine if values look like clock times (contain a colon)
+    final allLookLikeTimes = medicine.timesToTake.every((value) => value.contains(':'));
+
+    if (!allLookLikeTimes) {
+      // Routine comment: Backwards compatibility for older label-based entries
+      return medicine.timesToTake.join(', ');
+    }
+
+    // Convert each HH:mm string to a user-friendly time using TimeOfDay
+    final localizations = MaterialLocalizations.of(context);
+    final List<String> formattedTimes = [];
+
+    for (final value in medicine.timesToTake) {
+      final parts = value.split(':');
+      if (parts.length == 2) {
+        final hour = int.tryParse(parts[0]);
+        final minute = int.tryParse(parts[1]);
+        if (hour != null && minute != null) {
+          final timeOfDay = TimeOfDay(hour: hour, minute: minute);
+          formattedTimes.add(localizations.formatTimeOfDay(timeOfDay, alwaysUse24HourFormat: false));
+        }
+      }
+    }
+
+    if (formattedTimes.isEmpty) {
+      return medicine.timesToTake.join(', ');
+    }
+
+    // Routine comment: Prefix with 'Take at' for clarity on list screen
+    return 'Take at ${formattedTimes.join(', ')}';
   }
   
   @override
@@ -56,6 +100,9 @@ class _MedicineScreenState extends State<MedicineScreen> {
         _medicines = medicines;
         _isLoading = false;
       });
+
+      // Routine comment: Reschedule all notifications to match latest medicines
+      await _notificationService.rescheduleAll(_medicines);
     } catch (e) {
       // Handle error gracefully
       setState(() {
@@ -386,7 +433,7 @@ class _MedicineScreenState extends State<MedicineScreen> {
                 SizedBox(width: screenWidth * 0.02),
                 Expanded(
                   child: Text(
-                    medicine.timesToTake.join(', '),
+                    _buildTimesDescription(context, medicine),
                     style: TextStyle(
                       fontSize: baseTextSize * 0.8 * widget.accessibilityService.textSizeMultiplier,
                       color: Colors.grey.shade700,
