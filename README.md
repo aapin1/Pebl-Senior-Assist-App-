@@ -11,6 +11,14 @@ A cross-platform Flutter application designed specifically for senior users with
 - **Optional Screenshot Attachment**: Attach a screenshot to help the AI answer questions about what’s on the screen
 - **Cross-Platform**: Runs on both iOS and Android devices
 
+## Ads
+
+This version of the app contains **no ads**.
+
+- All ad-related code (AdMob/AdService/dialogs) has been removed.
+- The `google_mobile_ads` dependency is not included.
+- iOS/Android AdMob configuration keys have been removed.
+
 ## Recent Work (What Changed)
 
 ### Ask a Question Flow

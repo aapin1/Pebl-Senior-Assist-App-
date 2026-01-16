@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../widgets/ad_disclaimer_dialog.dart';
 import '../services/accessibility_service.dart';
 import 'demo_screen.dart';
 import 'accessibility_setup_screen.dart';
@@ -133,23 +132,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       height: screenHeight * 0.34,
                       child: InkWell(
                         onTap: () async {
-                          // Show disclaimer dialog EVERY time before entering question screen
-                          await AdDisclaimerDialog.showAlways(
-                            context: context,
-                            accessibilityService: _accessibilityService,
-                            onContinue: () {
-                              if (context.mounted) {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => InputMethodChoiceScreen(
-                                      accessibilityService: _accessibilityService,
-                                    ),
-                                  ),
-                                );
-                              }
-                            },
-                          );
+                          if (context.mounted) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => InputMethodChoiceScreen(
+                                  accessibilityService: _accessibilityService,
+                                ),
+                              ),
+                            );
+                          }
                         },
                         borderRadius: BorderRadius.circular(20),
                         child: Container(

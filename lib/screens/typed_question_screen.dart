@@ -6,7 +6,6 @@ import 'package:image_picker/image_picker.dart';
 import '../widgets/interactive_learning_card.dart';
 import '../services/ai_service.dart';
 import '../services/accessibility_service.dart';
-import '../services/ad_service.dart';
 
 /// Screen for typing questions with optional screenshot attachment
 /// Clean, minimal interface for text-based input
@@ -97,15 +96,6 @@ class _TypedQuestionScreenState extends State<TypedQuestionScreen> {
     _flutterTts.stop();
     if (content.isNotEmpty && widget.accessibilityService.isAudioEnabled) {
       _flutterTts.speak(content);
-    }
-  }
-  
-  /// Show ad if needed (called after completing or asking another question)
-  Future<void> _showAdIfNeeded() async {
-    bool shouldShowAd = await AdService().onUserQuery();
-    
-    if (shouldShowAd && mounted) {
-      await Future.delayed(const Duration(milliseconds: 500));
     }
   }
 
@@ -486,16 +476,14 @@ class _TypedQuestionScreenState extends State<TypedQuestionScreen> {
                               ] else if (_isLearningActive) ...[
                                 // Show "Ask Another Question" button when learning is active
                                 ElevatedButton.icon(
-                                  onPressed: () async {
-                                    await _showAdIfNeeded();
-                                    
+                                  onPressed: () {
                                     setState(() {
                                       _isLearningActive = false;
-                                      _learningSteps.clear();
-                                      _typedQuestionController.clear();
-                                      _screenshotFile = null;
-                                      _showScrollReminder = false;
+                                      _learningSteps = [];
                                     });
+                                    _typedQuestionController.clear();
+                                    _screenshotFile = null;
+                                    _showScrollReminder = false;
                                   },
                                   icon: const Icon(Icons.keyboard, size: 20),
                                   label: Text(
@@ -532,7 +520,6 @@ class _TypedQuestionScreenState extends State<TypedQuestionScreen> {
                             onStepRead: _handleStepTts,
                             onComplete: (success) async {
                               if (success) {
-                                await _showAdIfNeeded();
                                 _clearAll();
                               }
                             },

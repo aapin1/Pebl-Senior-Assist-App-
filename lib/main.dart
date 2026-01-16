@@ -3,7 +3,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/home_screen.dart';
 import 'screens/welcome_screen.dart';
 import 'services/accessibility_service.dart';
-import 'services/ad_service.dart';
 
 /// Main entry point of the Pebl application
 /// This app is designed with accessibility in mind for senior users
@@ -38,9 +37,6 @@ class _PeblAppState extends State<PeblApp> {
   Future<void> _initializeApp() async {
     // Initialize accessibility service first
     await _accessibilityService.initialize();
-    
-    // Initialize ad service for monetization
-    await AdService().initialize();
     
     setState(() {
       _isInitialized = true;

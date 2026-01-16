@@ -18,16 +18,9 @@ Pebl - Tech Assistant ("we," "our," or "us") is committed to protecting your pri
 - App usage patterns and interactions (anonymous)
 - This data is processed by OpenAI to provide functionality
 
-### Advertising Data
-- Device advertising identifier (IDFA) for personalized ads
-- Ad interaction data (views, clicks)
-- Device information for ad delivery
-- This data is collected by Google AdMob for advertising purposes
-
 ## How We Use Your Information
 - **Primary Purpose:** To provide AI-powered technology assistance and step-by-step guidance
 - **Processing:** Voice and text data is sent to OpenAI's API for natural language processing
-- **Advertising:** Device identifiers are used to show relevant ads and measure ad performance
 - **No Personal Storage:** We do not permanently store your personal conversations, voice data, or personally identifiable information
 
 ## Third-Party Services
@@ -36,13 +29,6 @@ Pebl - Tech Assistant ("we," "our," or "us") is committed to protecting your pri
 - We use OpenAI's API to process your questions and generate helpful responses
 - Your data is subject to OpenAI's Privacy Policy: https://openai.com/privacy/
 - OpenAI may temporarily process your data to provide responses but does not use it for training
-
-### Google AdMob
-- We use Google AdMob to display advertisements in the app
-- AdMob collects device advertising identifiers and ad interaction data
-- This data is used for ad personalization and performance measurement
-- AdMob's data collection is subject to Google's Privacy Policy: https://policies.google.com/privacy
-- You can opt out of personalized ads in your device settings
 
 ## Data Security
 - All data transmission uses industry-standard HTTPS encryption
@@ -58,20 +44,11 @@ Pebl - Tech Assistant ("we," "our," or "us") is committed to protecting your pri
 - You can stop using the app at any time
 - No account deletion is necessary as no personal accounts are created
 - You control what information you share through your voice interactions
-- You can opt out of personalized ads in your device settings (Settings > Privacy > Advertising)
 - You can request information about data collected by contacting us
 
 ## Data Sharing
 - **We do not sell your personal data**
 - Voice and text queries are shared with OpenAI for processing only
-- Anonymous advertising data is shared with Google AdMob for ad delivery
-- No personally identifiable information is linked to advertising data
-
-## Tracking and Analytics
-- We use product interaction data for tracking purposes through Google AdMob
-- This tracking is used to measure ad performance and optimize ad delivery
-- Tracking data is not linked to your personal identity
-- You can limit ad tracking in your device settings
 
 ## Children's Privacy
 This app is not intended for children under 13. We do not knowingly collect personal information from children under 13.

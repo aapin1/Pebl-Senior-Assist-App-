@@ -8,7 +8,6 @@ import '../widgets/microphone_button.dart';
 import '../widgets/interactive_learning_card.dart';
 import '../services/ai_service.dart';
 import '../services/accessibility_service.dart';
-import '../services/ad_service.dart';
 
 /// Dedicated question screen with large microphone button
 /// Simple interface for seniors to ask questions
@@ -109,21 +108,6 @@ class _QuestionScreenState extends State<QuestionScreen> {
     _flutterTts.stop(); // Stop any current speech
     if (content.isNotEmpty && widget.accessibilityService.isAudioEnabled) {
       _flutterTts.speak(content);
-    }
-  }
-  
-  /// Show ad if needed (called after completing or asking another question)
-  Future<void> _showAdIfNeeded() async {
-    // Check if we should show an ad
-    bool shouldShowAd = await AdService().onUserQuery();
-    
-    if (shouldShowAd && mounted) {
-      print('📺 Showing ad after completion/new question');
-      // Ad shows directly - no dialog needed
-      // The AdService.onUserQuery() already triggered the ad
-      
-      // Add a small delay to let user settle back after ad
-      await Future.delayed(const Duration(milliseconds: 500));
     }
   }
 
@@ -585,12 +569,9 @@ class _QuestionScreenState extends State<QuestionScreen> {
                                 // Show "Ask Another Question" button when learning is active
                                 ElevatedButton.icon(
                                   onPressed: () async {
-                                    // Show ad before allowing another question
-                                    await _showAdIfNeeded();
-                                    
                                     setState(() {
                                       _isLearningActive = false;
-                                      _learningSteps.clear();
+                                      _learningSteps = [];
                                       _transcribedText = '';
                                       _showScrollReminder = false;
                                     });
@@ -630,8 +611,6 @@ class _QuestionScreenState extends State<QuestionScreen> {
                             onStepRead: _handleStepTts,
                             onComplete: (success) async {
                               if (success) {
-                                // Show ad after completing the learning steps
-                                await _showAdIfNeeded();
                                 _clearAll();
                               }
                             },
