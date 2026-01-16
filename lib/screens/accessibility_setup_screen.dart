@@ -53,6 +53,19 @@ class _AccessibilitySetupScreenState extends State<AccessibilitySetupScreen> {
     await _flutterTts.setPitch(1.0);
   }
 
+  Future<void> _safeSpeak(String text) async {
+    if (text.trim().isEmpty) return;
+
+    try {
+      await Future.any([
+        _flutterTts.speak(text),
+        Future.delayed(const Duration(seconds: 8)),
+      ]);
+    } catch (e) {
+      // Ignore TTS errors so the setup flow stays usable
+    }
+  }
+
   void _playAudio(String text) async {
     if (_isPlaying) {
       await _flutterTts.stop();
@@ -63,7 +76,7 @@ class _AccessibilitySetupScreenState extends State<AccessibilitySetupScreen> {
       setState(() {
         _isPlaying = true;
       });
-      await _flutterTts.speak(text);
+      await _safeSpeak(text);
       setState(() {
         _isPlaying = false;
       });

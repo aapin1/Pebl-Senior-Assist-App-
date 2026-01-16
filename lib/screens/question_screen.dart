@@ -41,6 +41,9 @@ class _QuestionScreenState extends State<QuestionScreen> {
   
   // Store the transcribed text from speech recognition
   String _transcribedText = '';
+
+  // Editable controller for the final question text (matches typed screen UX)
+  final TextEditingController _voiceQuestionController = TextEditingController();
   
   // Store AI learning steps response
   List<LearningStep> _learningSteps = [];
@@ -91,23 +94,47 @@ class _QuestionScreenState extends State<QuestionScreen> {
 
   @override
   void dispose() {
+    // Stop any active speech recognition session
     _speechToText.stop();
+
+    // Stop any active TTS playback
     _flutterTts.stop();
+
+    // Dispose controllers to avoid leaks
+    _voiceQuestionController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
   // Stop TTS when navigating away from screen
   void _stopTtsAndNavigate(VoidCallback navigationCallback) {
+    // Stop audio so it doesn't continue playing after navigation
     _flutterTts.stop();
     navigationCallback();
   }
 
   // Method to handle TTS for learning steps - stops current audio first
   void _handleStepTts(String content) {
+    // Stop any current speech before starting new speech
     _flutterTts.stop(); // Stop any current speech
     if (content.isNotEmpty && widget.accessibilityService.isAudioEnabled) {
-      _flutterTts.speak(content);
+      _safeSpeak(content);
+    }
+  }
+
+  // Speak with error handling + timeout so TTS never hangs the UI
+  Future<void> _safeSpeak(String content) async {
+    // Avoid trying to speak empty content
+    if (content.trim().isEmpty) return;
+
+    try {
+      // Enforce a timeout so TTS failures don't block progress
+      await Future.any([
+        _flutterTts.speak(content),
+        Future.delayed(const Duration(seconds: 8)),
+      ]);
+    } catch (e) {
+      // Silently ignore TTS errors to avoid confusing seniors
     }
   }
 
@@ -192,20 +219,30 @@ class _QuestionScreenState extends State<QuestionScreen> {
       // Start listening for voice input
       setState(() {
         _isListening = true;
-        _transcribedText = 'Listening...';
       });
 
       try {
         // Start speech recognition with extended timeout for seniors
         await _speechToText.listen(
           onResult: (result) {
-            setState(() {
-              _transcribedText = result.recognizedWords;
-            });
+            // Always mirror partial and final results into the editable text field
+            // so the user can correct text before submitting.
+            if (result.recognizedWords.isNotEmpty) {
+              _voiceQuestionController.text = result.recognizedWords;
+              _voiceQuestionController.selection = TextSelection.fromPosition(
+                TextPosition(offset: _voiceQuestionController.text.length),
+              );
+            }
+
+            // Rebuild so the Ask button enabled state updates as speech comes in.
+            setState(() {});
             
-            // When speech recognition is complete, process the question
+            // When speech recognition is complete, stop listening.
+            // The user must confirm by tapping the Ask button.
             if (result.finalResult && result.recognizedWords.isNotEmpty) {
-              _processQuestion(result.recognizedWords);
+              setState(() {
+                _isListening = false;
+              });
             }
           },
           listenOptions: SpeechListenOptions(
@@ -239,8 +276,6 @@ class _QuestionScreenState extends State<QuestionScreen> {
     });
 
     try {
-      // Don't show ad when asking question - only show after completion or new question
-      
       // Add user question to conversation history for context
       _conversationHistory.add({
         'role': 'user',
@@ -288,7 +323,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
 
       // Read the first step aloud if audio is enabled
       if (widget.accessibilityService.isAudioEnabled && steps.isNotEmpty) {
-        await _flutterTts.speak(steps.first.content);
+        await _safeSpeak(steps.first.content);
       }
 
     } catch (e) {
@@ -311,6 +346,9 @@ class _QuestionScreenState extends State<QuestionScreen> {
       _conversationHistory.clear();
       _screenshotFile = null;
     });
+
+    // Clear the editable question field
+    _voiceQuestionController.clear();
   }
 
   /// Let the user pick a screenshot from the photo library
@@ -407,59 +445,30 @@ class _QuestionScreenState extends State<QuestionScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              // Show transcribed text when speaking or after question asked
-                              if (_transcribedText.isNotEmpty) ...[
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey.shade50,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.grey.shade300),
-                                  ),
+                              // Only show microphone interface if no learning is active
+                              if (!_isLearningActive) ...[
+                                Icon(
+                                  Icons.mic_none,
+                                  size: 48,
+                                  color: Colors.blue.shade400,
+                                ),
+                                const SizedBox(height: 16),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
                                   child: Text(
-                                    _transcribedText,
+                                    'Click the microphone and say your question',
                                     style: TextStyle(
-                                      fontSize: 15 * widget.accessibilityService.textSizeMultiplier,
-                                      color: Colors.grey.shade800,
+                                      fontSize: 16 * widget.accessibilityService.textSizeMultiplier,
+                                      color: Colors.blue.shade700,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                     textAlign: TextAlign.center,
+                                    softWrap: true,
+                                    overflow: TextOverflow.visible,
                                   ),
                                 ),
                                 const SizedBox(height: 16),
-                              ],
-                          
-                              // Only show microphone interface if no learning is active
-                              if (!_isLearningActive) ...[
-                                // Status text with better styling
-                                if (!_isListening && _transcribedText.isEmpty && !_isProcessing) ...[
-                                  Icon(
-                                    Icons.mic_none,
-                                    size: 48,
-                                    color: Colors.blue.shade400,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                                    child: Column(
-                                      children: [
-                                        Text(
-                                          'Tap the microphone below and ask your question',
-                                          style: TextStyle(
-                                            fontSize: 16 * widget.accessibilityService.textSizeMultiplier,
-                                            color: Colors.blue.shade700,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                          textAlign: TextAlign.center,
-                                          softWrap: true,
-                                          overflow: TextOverflow.visible,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                ],
-                            
+
                                 // Large microphone button
                                 SizedBox(
                                   height: 100, // Fixed height for button area
@@ -471,6 +480,43 @@ class _QuestionScreenState extends State<QuestionScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 16),
+
+                                // Editable text field for the final question (matches typed screen)
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: TextField(
+                                    controller: _voiceQuestionController,
+                                    minLines: 1,
+                                    maxLines: 5,
+                                    textInputAction: TextInputAction.newline,
+                                    style: TextStyle(
+                                      fontSize: 15 * widget.accessibilityService.textSizeMultiplier,
+                                      color: Colors.black,
+                                    ),
+                                    decoration: InputDecoration(
+                                      filled: true,
+                                      fillColor: Colors.grey.shade50,
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide(color: Colors.grey.shade300),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide(color: Colors.grey.shade300),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide(color: Colors.blue.shade400, width: 2),
+                                      ),
+                                    ),
+                                    onChanged: (_) {
+                                      // Rebuild to update Ask button enabled state
+                                      setState(() {});
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
 
                                 // Button to add a screenshot for extra context
                                 SizedBox(
@@ -498,6 +544,8 @@ class _QuestionScreenState extends State<QuestionScreen> {
                                     ),
                                   ),
                                 ),
+
+                                const SizedBox(height: 12),
 
                                 if (_screenshotFile != null) ...[
                                   const SizedBox(height: 8),
@@ -547,8 +595,59 @@ class _QuestionScreenState extends State<QuestionScreen> {
                                       ],
                                     ),
                                   ),
+                                  const SizedBox(height: 12),
                                 ],
-                            
+
+                                // Explicit Ask button (matches typed screen: user confirms sending)
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    onPressed: (_isProcessing || _voiceQuestionController.text.trim().isEmpty)
+                                        ? null
+                                        : () async {
+                                            // Stop any TTS before sending
+                                            await _flutterTts.stop();
+
+                                            // Send the edited text, not the raw transcription
+                                            await _processQuestion(_voiceQuestionController.text.trim());
+                                          },
+                                    icon: const Icon(Icons.send, size: 20),
+                                    label: Text(
+                                      'Ask',
+                                      style: TextStyle(
+                                        fontSize: 16 * widget.accessibilityService.textSizeMultiplier,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    style: ButtonStyle(
+                                      backgroundColor: WidgetStateProperty.resolveWith<Color>(
+                                        (states) {
+                                          if (states.contains(WidgetState.disabled)) {
+                                            return Colors.grey.shade300;
+                                          }
+                                          return Colors.blue.shade600;
+                                        },
+                                      ),
+                                      foregroundColor: WidgetStateProperty.resolveWith<Color>(
+                                        (states) {
+                                          if (states.contains(WidgetState.disabled)) {
+                                            return Colors.grey.shade700;
+                                          }
+                                          return Colors.white;
+                                        },
+                                      ),
+                                      padding: const WidgetStatePropertyAll(
+                                        EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                                      ),
+                                      shape: WidgetStatePropertyAll(
+                                        RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
                                 // Show thinking text below microphone when processing
                                 if (_isProcessing) ...[
                                   Padding(
@@ -575,6 +674,9 @@ class _QuestionScreenState extends State<QuestionScreen> {
                                       _transcribedText = '';
                                       _showScrollReminder = false;
                                     });
+
+                                    // Also clear the editable field so the user starts fresh
+                                    _voiceQuestionController.clear();
                                   },
                                   icon: const Icon(Icons.mic, size: 20),
                                   label: Text(

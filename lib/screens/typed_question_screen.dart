@@ -95,7 +95,21 @@ class _TypedQuestionScreenState extends State<TypedQuestionScreen> {
   void _handleStepTts(String content) {
     _flutterTts.stop();
     if (content.isNotEmpty && widget.accessibilityService.isAudioEnabled) {
-      _flutterTts.speak(content);
+      _safeSpeak(content);
+    }
+  }
+
+  // Speak with error handling + timeout so TTS never hangs the UI
+  Future<void> _safeSpeak(String content) async {
+    if (content.trim().isEmpty) return;
+
+    try {
+      await Future.any([
+        _flutterTts.speak(content),
+        Future.delayed(const Duration(seconds: 8)),
+      ]);
+    } catch (e) {
+      // Silently ignore TTS errors to avoid confusing seniors
     }
   }
 
@@ -161,7 +175,7 @@ class _TypedQuestionScreenState extends State<TypedQuestionScreen> {
 
       // Read the first step aloud if audio is enabled
       if (widget.accessibilityService.isAudioEnabled && steps.isNotEmpty) {
-        await _flutterTts.speak(steps.first.content);
+        await _safeSpeak(steps.first.content);
       }
 
     } catch (e) {
@@ -318,10 +332,13 @@ class _TypedQuestionScreenState extends State<TypedQuestionScreen> {
                                         fontSize: 15 * widget.accessibilityService.textSizeMultiplier,
                                         color: Colors.black,
                                       ),
+                                      onChanged: (_) {
+                                        setState(() {});
+                                      },
                                       decoration: InputDecoration(
                                         filled: true,
                                         fillColor: Colors.grey.shade50,
-                                        hintText: 'Tap here to type...',
+                                        hintText: 'Click here...',
                                         hintStyle: TextStyle(
                                           fontSize: 14 * widget.accessibilityService.textSizeMultiplier,
                                           color: Colors.grey.shade500,
@@ -428,13 +445,11 @@ class _TypedQuestionScreenState extends State<TypedQuestionScreen> {
                                 SizedBox(
                                   width: double.infinity,
                                   child: ElevatedButton.icon(
-                                    onPressed: _isProcessing
+                                    onPressed: (_isProcessing || _typedQuestionController.text.trim().isEmpty)
                                         ? null
                                         : () {
                                             final text = _typedQuestionController.text.trim();
-                                            if (text.isNotEmpty) {
-                                              _processQuestion(text);
-                                            }
+                                            _processQuestion(text);
                                           },
                                     icon: const Icon(Icons.send, size: 20),
                                     label: Text(
@@ -445,12 +460,30 @@ class _TypedQuestionScreenState extends State<TypedQuestionScreen> {
                                       overflow: TextOverflow.visible,
                                       softWrap: false,
                                     ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.blue.shade600,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
+                                    style: ButtonStyle(
+                                      backgroundColor: WidgetStateProperty.resolveWith<Color>(
+                                        (states) {
+                                          if (states.contains(WidgetState.disabled)) {
+                                            return Colors.grey.shade300;
+                                          }
+                                          return Colors.blue.shade600;
+                                        },
+                                      ),
+                                      foregroundColor: WidgetStateProperty.resolveWith<Color>(
+                                        (states) {
+                                          if (states.contains(WidgetState.disabled)) {
+                                            return Colors.grey.shade700;
+                                          }
+                                          return Colors.white;
+                                        },
+                                      ),
+                                      padding: const WidgetStatePropertyAll(
+                                        EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                                      ),
+                                      shape: WidgetStatePropertyAll(
+                                        RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
                                       ),
                                     ),
                                   ),

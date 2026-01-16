@@ -8,7 +8,7 @@ A cross-platform Flutter application designed specifically for senior users with
 - **Simple Interface**: Clean, uncluttered design with intuitive navigation
 - **Voice Interaction**: Large microphone button for easy voice input
 - **Typed Questions**: Optionally type questions instead of speaking
-- **Optional Screenshot Attachment**: Attach a screenshot to help the AI answer questions about what’s on the screen
+- **Fully Functional Screenshot Attachment**: Attach a screenshot (voice or typed) so the AI can answer questions about what’s on the screen (the screenshot is sent as real image data to the AI)
 - **Cross-Platform**: Runs on both iOS and Android devices
 
 ## Ads
@@ -33,6 +33,7 @@ This version of the app contains **no ads**.
 
 - The app can now attach an optional screenshot to OpenAI Chat Completions using a multimodal user message:
   - `content: [{type: "text", ...}, {type: "image_url", image_url: {url: "data:<mime>;base64,..."}}]`
+- This screenshot feature is fully functional end-to-end (image bytes are actually sent to the AI, not just mentioned in text).
 - **HEIC support** (common for iOS screenshots): the screenshot is converted/compressed to **JPEG** on-device using `flutter_image_compress` before being sent.
 - **Graceful fallback**: if the screenshot can’t be converted or is too large, the request falls back to text-only (no crashes).
 - **Debug logging** (debug builds only) was added so you can confirm whether the screenshot was actually attached:
