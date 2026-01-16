@@ -3,8 +3,7 @@ import '../widgets/ad_disclaimer_dialog.dart';
 import '../services/accessibility_service.dart';
 import 'demo_screen.dart';
 import 'accessibility_setup_screen.dart';
-import 'question_screen.dart';
-import 'medicine_screen.dart';
+import 'input_method_choice_screen.dart';
 
 /// Responsive Home screen of the Pebl app
 /// Adapts to all screen sizes using percentage-based sizing
@@ -129,173 +128,89 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     
                     SizedBox(height: screenHeight * 0.02),
               
-                    // Main Menu - Two Options using Expanded to fill available space
-                    Expanded(
-                      child: Column(
-                        children: [
-                          // Ask a Question Option - Entire card is tappable
-                          Expanded(
-                            child: InkWell(
-                              onTap: () async {
-                                // Show disclaimer dialog EVERY time before entering question screen
-                                await AdDisclaimerDialog.showAlways(
-                                  context: context,
-                                  accessibilityService: _accessibilityService,
-                                  onContinue: () {
-                                    if (context.mounted) {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => QuestionScreen(
-                                            accessibilityService: _accessibilityService,
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                  },
-                                );
-                              },
-                              borderRadius: BorderRadius.circular(20),
-                              child: Container(
-                                width: double.infinity,
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: screenWidth * 0.03,
-                                  vertical: screenHeight * 0.01,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.95),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: Colors.blue.shade300,
-                                    width: 2,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.blue.shade200.withOpacity(0.3),
-                                      blurRadius: 15,
-                                      offset: const Offset(0, 8),
-                                    ),
-                                  ],
-                                ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.mic,
-                                      size: screenHeight * 0.045,
-                                      color: Colors.blue.shade600,
-                                    ),
-                                    SizedBox(height: screenHeight * 0.008),
-                                    Flexible(
-                                      child: Text(
-                                        'Ask Me Anything!',
-                                        style: TextStyle(
-                                          fontSize: baseTextSize * 1.1 * _accessibilityService.textSizeMultiplier,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.blue.shade800,
-                                        ),
-                                        textAlign: TextAlign.center,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    SizedBox(height: screenHeight * 0.004),
-                                    Flexible(
-                                      child: Text(
-                                        'Get help with tech',
-                                        style: TextStyle(
-                                          fontSize: baseTextSize * 0.75 * _accessibilityService.textSizeMultiplier,
-                                          color: Colors.grey.shade600,
-                                        ),
-                                        textAlign: TextAlign.center,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                          
-                          SizedBox(height: screenHeight * 0.015),
-                          
-                          // Manage Medicines Option - Entire card is tappable
-                          Expanded(
-                            child: InkWell(
-                              onTap: () {
+                    // Main Menu - Single Tech Help option with controlled height
+                    SizedBox(
+                      height: screenHeight * 0.34,
+                      child: InkWell(
+                        onTap: () async {
+                          // Show disclaimer dialog EVERY time before entering question screen
+                          await AdDisclaimerDialog.showAlways(
+                            context: context,
+                            accessibilityService: _accessibilityService,
+                            onContinue: () {
+                              if (context.mounted) {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => MedicineScreen(
+                                    builder: (context) => InputMethodChoiceScreen(
                                       accessibilityService: _accessibilityService,
                                     ),
                                   ),
                                 );
-                              },
-                              borderRadius: BorderRadius.circular(20),
-                              child: Container(
-                                width: double.infinity,
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: screenWidth * 0.03,
-                                  vertical: screenHeight * 0.01,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.95),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: Colors.purple.shade300,
-                                    width: 2,
+                              }
+                            },
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: screenWidth * 0.03,
+                            vertical: screenHeight * 0.01,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.95),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Colors.blue.shade300,
+                              width: 2,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.blue.shade200.withOpacity(0.3),
+                                blurRadius: 15,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.mic,
+                                size: screenHeight * 0.045,
+                                color: Colors.blue.shade600,
+                              ),
+                              SizedBox(height: screenHeight * 0.008),
+                              Flexible(
+                                child: Text(
+                                  'Ask Me Anything!',
+                                  style: TextStyle(
+                                    fontSize: baseTextSize * 1.1 * _accessibilityService.textSizeMultiplier,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blue.shade800,
                                   ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.purple.shade200.withOpacity(0.3),
-                                      blurRadius: 15,
-                                      offset: const Offset(0, 8),
-                                    ),
-                                  ],
-                                ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.medication,
-                                      size: screenHeight * 0.045,
-                                      color: Colors.purple.shade600,
-                                    ),
-                                    SizedBox(height: screenHeight * 0.008),
-                                    Flexible(
-                                      child: Text(
-                                        'Manage Medicines',
-                                        style: TextStyle(
-                                          fontSize: baseTextSize * 1.1 * _accessibilityService.textSizeMultiplier,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.purple.shade800,
-                                        ),
-                                        textAlign: TextAlign.center,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    SizedBox(height: screenHeight * 0.004),
-                                    Flexible(
-                                      child: Text(
-                                        'Track medications',
-                                        style: TextStyle(
-                                          fontSize: baseTextSize * 0.75 * _accessibilityService.textSizeMultiplier,
-                                          color: Colors.grey.shade600,
-                                        ),
-                                        textAlign: TextAlign.center,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                            ),
+                              SizedBox(height: screenHeight * 0.004),
+                              Flexible(
+                                child: Text(
+                                  'Get help with tech',
+                                  style: TextStyle(
+                                    fontSize: baseTextSize * 0.75 * _accessibilityService.textSizeMultiplier,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
                     

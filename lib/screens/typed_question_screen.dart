@@ -1,47 +1,36 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:speech_to_text/speech_to_text.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:image_picker/image_picker.dart';
-import '../widgets/microphone_button.dart';
 import '../widgets/interactive_learning_card.dart';
 import '../services/ai_service.dart';
 import '../services/accessibility_service.dart';
 import '../services/ad_service.dart';
 
-/// Dedicated question screen with large microphone button
-/// Simple interface for seniors to ask questions
-class QuestionScreen extends StatefulWidget {
+/// Screen for typing questions with optional screenshot attachment
+/// Clean, minimal interface for text-based input
+class TypedQuestionScreen extends StatefulWidget {
   final AccessibilityService accessibilityService;
   
-  const QuestionScreen({
+  const TypedQuestionScreen({
     super.key,
     required this.accessibilityService,
   });
 
   @override
-  State<QuestionScreen> createState() => _QuestionScreenState();
+  State<TypedQuestionScreen> createState() => _TypedQuestionScreenState();
 }
 
-class _QuestionScreenState extends State<QuestionScreen> {
-  // Speech recognition instance for voice input
-  final SpeechToText _speechToText = SpeechToText();
-  
+class _TypedQuestionScreenState extends State<TypedQuestionScreen> {
   // Text-to-speech instance for AI responses
   final FlutterTts _flutterTts = FlutterTts();
   
   // AI service instance for processing questions
   final AIService _aiService = AIService();
   
-  // Track whether the app is currently listening for voice input
-  bool _isListening = false;
-  
   // Track if AI is processing the question
   bool _isProcessing = false;
-  
-  // Store the transcribed text from speech recognition
-  String _transcribedText = '';
   
   // Store AI learning steps response
   List<LearningStep> _learningSteps = [];
@@ -51,9 +40,6 @@ class _QuestionScreenState extends State<QuestionScreen> {
   
   // Conversation history for context in follow-up questions
   List<Map<String, String>> _conversationHistory = [];
-  
-  // Track if speech recognition is available on device
-  bool _speechEnabled = false;
   
   // Track if scroll reminder should be shown
   bool _showScrollReminder = false;
@@ -67,10 +53,12 @@ class _QuestionScreenState extends State<QuestionScreen> {
   // Image picker instance for selecting screenshots
   final ImagePicker _imagePicker = ImagePicker();
 
+  // Controller for typed questions
+  final TextEditingController _typedQuestionController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
-    _initSpeech();
     _initTts();
     _scrollController.addListener(_onScroll);
   }
@@ -80,7 +68,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
     if (_scrollController.hasClients) {
       final maxScroll = _scrollController.position.maxScrollExtent;
       final currentScroll = _scrollController.position.pixels;
-      final threshold = maxScroll - 100; // Hide when within 100px of bottom
+      final threshold = maxScroll - 100;
       
       if (currentScroll >= threshold && _showScrollReminder) {
         setState(() {
@@ -92,8 +80,8 @@ class _QuestionScreenState extends State<QuestionScreen> {
 
   @override
   void dispose() {
-    _speechToText.stop();
     _flutterTts.stop();
+    _typedQuestionController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -106,7 +94,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
 
   // Method to handle TTS for learning steps - stops current audio first
   void _handleStepTts(String content) {
-    _flutterTts.stop(); // Stop any current speech
+    _flutterTts.stop();
     if (content.isNotEmpty && widget.accessibilityService.isAudioEnabled) {
       _flutterTts.speak(content);
     }
@@ -114,15 +102,9 @@ class _QuestionScreenState extends State<QuestionScreen> {
   
   /// Show ad if needed (called after completing or asking another question)
   Future<void> _showAdIfNeeded() async {
-    // Check if we should show an ad
     bool shouldShowAd = await AdService().onUserQuery();
     
     if (shouldShowAd && mounted) {
-      print('📺 Showing ad after completion/new question');
-      // Ad shows directly - no dialog needed
-      // The AdService.onUserQuery() already triggered the ad
-      
-      // Add a small delay to let user settle back after ad
       await Future.delayed(const Duration(milliseconds: 500));
     }
   }
@@ -130,133 +112,18 @@ class _QuestionScreenState extends State<QuestionScreen> {
   /// Initialize text-to-speech for AI responses with senior-friendly settings
   void _initTts() async {
     await _flutterTts.setLanguage('en-US');
-    await _flutterTts.setSpeechRate(0.5); // Slower speech rate for seniors
+    await _flutterTts.setSpeechRate(0.5);
     await _flutterTts.setVolume(0.8);
     await _flutterTts.setPitch(1.0);
   }
 
-  /// Initialize speech recognition and request permissions
-  void _initSpeech() async {
-    // Initialize speech recognition (this will trigger permission request)
-    _speechEnabled = await _speechToText.initialize(
-      onError: (error) {
-        setState(() {
-          _isListening = false;
-          _transcribedText = 'Error: ${error.errorMsg}';
-        });
-      },
-      onStatus: (status) {
-        // Handle speech recognition status changes
-        if (status == 'done' || status == 'notListening') {
-          setState(() {
-            _isListening = false;
-          });
-        }
-      },
-    );
-    
-    // Show message if speech recognition is not available
-    if (!_speechEnabled) {
-      setState(() {
-        _transcribedText = 'Tap microphone to enable speech recognition';
-      });
-    }
-  }
-
-  /// Handles microphone button tap - starts/stops speech recognition
-  void _onMicrophoneTapped() async {
-    // Stop any ongoing TTS to prevent feedback loop
-    await _flutterTts.stop();
-    
-    // If speech recognition isn't enabled, try to initialize it again
-    if (!_speechEnabled) {
-      setState(() {
-        _transcribedText = 'Requesting microphone permission...';
-      });
-      
-      // Try to initialize speech recognition (this will prompt for permission)
-      _speechEnabled = await _speechToText.initialize(
-        onError: (error) {
-          setState(() {
-            _isListening = false;
-            _transcribedText = 'Permission denied or error: ${error.errorMsg}';
-          });
-        },
-        onStatus: (status) {
-          if (status == 'done' || status == 'notListening') {
-            setState(() {
-              _isListening = false;
-            });
-          }
-        },
-      );
-      
-      if (!_speechEnabled) {
-        setState(() {
-          _transcribedText = 'Please allow microphone access in Settings > Privacy & Security > Microphone > Pebl';
-        });
-        return;
-      } else {
-        setState(() {
-          _transcribedText = 'Permission granted! Tap microphone again to start listening.';
-        });
-        return;
-      }
-    }
-
-    if (!_isListening) {
-      // Start listening for voice input
-      setState(() {
-        _isListening = true;
-        _transcribedText = 'Listening...';
-      });
-
-      try {
-        // Start speech recognition with extended timeout for seniors
-        await _speechToText.listen(
-          onResult: (result) {
-            setState(() {
-              _transcribedText = result.recognizedWords;
-            });
-            
-            // When speech recognition is complete, process the question
-            if (result.finalResult && result.recognizedWords.isNotEmpty) {
-              _processQuestion(result.recognizedWords);
-            }
-          },
-          listenOptions: SpeechListenOptions(
-            partialResults: true,
-            listenMode: ListenMode.confirmation,
-          ),
-          localeId: 'en_US',
-          listenFor: const Duration(seconds: 100), // Extended listening time
-          pauseFor: const Duration(seconds: 10), // Extended pause tolerance
-        );
-      } catch (e) {
-        setState(() {
-          _isListening = false;
-          _transcribedText = 'Error starting speech recognition';
-        });
-      }
-    } else {
-      // Stop listening
-      await _speechToText.stop();
-      setState(() {
-        _isListening = false;
-      });
-    }
-  }
-
-  /// Process the user's question with AI service
+  /// Process the user's typed question with AI service
   Future<void> _processQuestion(String question) async {
     setState(() {
       _isProcessing = true;
-      _isListening = false;
     });
 
     try {
-      // Don't show ad when asking question - only show after completion or new question
-      
       // Add user question to conversation history for context
       _conversationHistory.add({
         'role': 'user',
@@ -275,7 +142,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted && _isLearningActive) {
           setState(() {
-            _showScrollReminder = true; // Show the reminder
+            _showScrollReminder = true;
           });
           
           // Auto-hide after 8 seconds if user hasn't scrolled
@@ -308,9 +175,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
       }
 
     } catch (e) {
-      // Handle errors gracefully for seniors
       setState(() {
-        _transcribedText = 'Sorry, I couldn\'t process your question. Please try again.';
         _isProcessing = false;
       });
     }
@@ -318,14 +183,14 @@ class _QuestionScreenState extends State<QuestionScreen> {
 
   /// Clear all content and return to initial state
   void _clearAll() {
-    _flutterTts.stop(); // Stop any ongoing TTS
+    _flutterTts.stop();
     setState(() {
-      _transcribedText = '';
       _learningSteps = [];
       _isLearningActive = false;
       _isProcessing = false;
       _conversationHistory.clear();
       _screenshotFile = null;
+      _typedQuestionController.clear();
     });
   }
 
@@ -401,88 +266,90 @@ class _QuestionScreenState extends State<QuestionScreen> {
                       children: [
                         const SizedBox(height: 20),
                     
-                        // Prompt area - always visible but changes position and content
+                        // Main input area - always visible but changes based on state
                         Container(
                           width: double.infinity,
                           padding: EdgeInsets.all(_isLearningActive ? 16.0 : 24.0),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.95),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: Colors.blue.shade300,
-                          width: 2,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.blue.shade200.withOpacity(0.3),
-                            blurRadius: 15,
-                            offset: const Offset(0, 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.95),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Colors.blue.shade300,
+                              width: 2,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.blue.shade200.withOpacity(0.3),
+                                blurRadius: 15,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              // Show transcribed text when speaking or after question asked
-                              if (_transcribedText.isNotEmpty) ...[
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey.shade50,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.grey.shade300),
-                                  ),
-                                  child: Text(
-                                    _transcribedText,
-                                    style: TextStyle(
-                                      fontSize: 15 * widget.accessibilityService.textSizeMultiplier,
-                                      color: Colors.grey.shade800,
-                                    ),
-                                    textAlign: TextAlign.center,
+                              // Only show input interface if no learning is active
+                              if (!_isLearningActive) ...[
+                                Icon(
+                                  Icons.keyboard,
+                                  size: 48,
+                                  color: Colors.green.shade400,
+                                ),
+                                const SizedBox(height: 16),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        'Type your question below',
+                                        style: TextStyle(
+                                          fontSize: 16 * widget.accessibilityService.textSizeMultiplier,
+                                          color: Colors.blue.shade700,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                        softWrap: true,
+                                        overflow: TextOverflow.visible,
+                                      ),
+                                    ],
                                   ),
                                 ),
                                 const SizedBox(height: 16),
-                              ],
-                          
-                              // Only show microphone interface if no learning is active
-                              if (!_isLearningActive) ...[
-                                // Status text with better styling
-                                if (!_isListening && _transcribedText.isEmpty && !_isProcessing) ...[
-                                  Icon(
-                                    Icons.mic_none,
-                                    size: 48,
-                                    color: Colors.blue.shade400,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                                    child: Column(
-                                      children: [
-                                        Text(
-                                          'Tap the microphone below and ask your question',
-                                          style: TextStyle(
-                                            fontSize: 16 * widget.accessibilityService.textSizeMultiplier,
-                                            color: Colors.blue.shade700,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                          textAlign: TextAlign.center,
-                                          softWrap: true,
-                                          overflow: TextOverflow.visible,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                ],
-                            
-                                // Large microphone button
+
+                                // Text input area (replaces the mic button area)
                                 SizedBox(
-                                  height: 100, // Fixed height for button area
+                                  height: 100,
                                   child: Center(
-                                    child: MicrophoneButton(
-                                      isListening: _isListening,
-                                      onTap: _onMicrophoneTapped,
+                                    child: TextField(
+                                      controller: _typedQuestionController,
+                                      maxLines: 3,
+                                      textInputAction: TextInputAction.newline,
+                                      style: TextStyle(
+                                        fontSize: 15 * widget.accessibilityService.textSizeMultiplier,
+                                        color: Colors.black,
+                                      ),
+                                      decoration: InputDecoration(
+                                        filled: true,
+                                        fillColor: Colors.grey.shade50,
+                                        hintText: 'Tap here to type...',
+                                        hintStyle: TextStyle(
+                                          fontSize: 14 * widget.accessibilityService.textSizeMultiplier,
+                                          color: Colors.grey.shade500,
+                                        ),
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                          borderSide: BorderSide(color: Colors.grey.shade300),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                          borderSide: BorderSide(color: Colors.grey.shade300),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                          borderSide: BorderSide(color: Colors.blue.shade400, width: 2),
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -564,9 +431,44 @@ class _QuestionScreenState extends State<QuestionScreen> {
                                     ),
                                   ),
                                 ],
+                                
+                                const SizedBox(height: 16),
+
+                                // Submit button (matches the placement of the voice screen status area)
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    onPressed: _isProcessing
+                                        ? null
+                                        : () {
+                                            final text = _typedQuestionController.text.trim();
+                                            if (text.isNotEmpty) {
+                                              _processQuestion(text);
+                                            }
+                                          },
+                                    icon: const Icon(Icons.send, size: 20),
+                                    label: Text(
+                                      'Ask',
+                                      style: TextStyle(
+                                        fontSize: 14 * widget.accessibilityService.textSizeMultiplier,
+                                      ),
+                                      overflow: TextOverflow.visible,
+                                      softWrap: false,
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.blue.shade600,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                  ),
+                                ),
                             
-                                // Show thinking text below microphone when processing
+                                // Show thinking text when processing
                                 if (_isProcessing) ...[
+                                  const SizedBox(height: 16),
                                   Padding(
                                     padding: const EdgeInsets.symmetric(horizontal: 12),
                                     child: Text(
@@ -585,17 +487,17 @@ class _QuestionScreenState extends State<QuestionScreen> {
                                 // Show "Ask Another Question" button when learning is active
                                 ElevatedButton.icon(
                                   onPressed: () async {
-                                    // Show ad before allowing another question
                                     await _showAdIfNeeded();
                                     
                                     setState(() {
                                       _isLearningActive = false;
                                       _learningSteps.clear();
-                                      _transcribedText = '';
+                                      _typedQuestionController.clear();
+                                      _screenshotFile = null;
                                       _showScrollReminder = false;
                                     });
                                   },
-                                  icon: const Icon(Icons.mic, size: 20),
+                                  icon: const Icon(Icons.keyboard, size: 20),
                                   label: Text(
                                     'Ask Another Question',
                                     style: TextStyle(
@@ -630,7 +532,6 @@ class _QuestionScreenState extends State<QuestionScreen> {
                             onStepRead: _handleStepTts,
                             onComplete: (success) async {
                               if (success) {
-                                // Show ad after completing the learning steps
                                 await _showAdIfNeeded();
                                 _clearAll();
                               }
@@ -644,7 +545,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
                   ),
                 ),
                 
-                // Scroll reminder indicator - shows when learning is active and user hasn't scrolled to bottom
+                // Scroll reminder indicator
                 if (_isLearningActive && _showScrollReminder)
                   Positioned(
                     bottom: 20,
@@ -653,13 +554,11 @@ class _QuestionScreenState extends State<QuestionScreen> {
                     child: Center(
                       child: GestureDetector(
                         onTap: () {
-                          // Scroll down 200 pixels to show there's more content
                           _scrollController.animateTo(
                             _scrollController.offset + 200,
                             duration: const Duration(milliseconds: 500),
                             curve: Curves.easeInOut,
                           );
-                          // Hide the reminder after scrolling
                           setState(() {
                             _showScrollReminder = false;
                           });

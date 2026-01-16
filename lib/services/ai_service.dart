@@ -1,6 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import '../widgets/interactive_learning_card.dart';
 
 /// AI Service for handling OpenAI GPT interactions
@@ -18,6 +21,11 @@ class AIService {
   /// Senior-focused system prompt for tech support with interactive learning format
   static const String _systemPrompt = '''
 You are a friendly, patient, and helpful technology assistant designed to support senior citizens with their Apple devices (iPhone, iPad, Mac). Your main goal is to explain solutions in a way that is simple, clear, and encouraging.
+
+If the user attached a screenshot:
+- Look at the screenshot carefully.
+- If the question is about the screenshot (for example: "what is this?" or "what does this mean?") then your FIRST step should briefly describe what is on the screen and what it likely indicates.
+- Then continue with simple next steps.
 
 IMPORTANT FORMATTING RULES:
 - Never use markdown formatting like ### or ** or __ in your responses
@@ -80,8 +88,17 @@ Remember: Your role is not just to solve the problem, but to make the person fee
 ''';
 
   /// Send a query to OpenAI with conversation history and get structured learning steps
-  Future<List<LearningStep>> getSeniorTechSupportStepsWithHistory(String userQuery, List<Map<String, String>> conversationHistory) async {
-    final response = await getSeniorTechSupportWithHistory(userQuery, conversationHistory);
+  /// Optional [screenshotPath] allows us to let the model know a screenshot was attached
+  Future<List<LearningStep>> getSeniorTechSupportStepsWithHistory(
+    String userQuery,
+    List<Map<String, String>> conversationHistory, {
+    String? screenshotPath,
+  }) async {
+    final response = await getSeniorTechSupportWithHistory(
+      userQuery,
+      conversationHistory,
+      screenshotPath: screenshotPath,
+    );
     return _parseResponseToSteps(response);
   }
 
@@ -338,7 +355,12 @@ Remember: Your role is not just to solve the problem, but to make the person fee
   }
 
   /// Send a query to OpenAI with conversation history for context (legacy method)
-  Future<String> getSeniorTechSupportWithHistory(String userQuery, List<Map<String, String>> conversationHistory) async {
+  /// Optional [screenshotPath] lets us tell the model a screenshot is present
+  Future<String> getSeniorTechSupportWithHistory(
+    String userQuery,
+    List<Map<String, String>> conversationHistory, {
+    String? screenshotPath,
+  }) async {
     // Starting AI request with history
     // Conversation history available
     // API key configuration checked
@@ -355,7 +377,7 @@ Remember: Your role is not just to solve the problem, but to make the person fee
         // Making request to OpenAI
         
         // Build messages array with system prompt + conversation history
-        List<Map<String, String>> messages = [
+        final List<Map<String, dynamic>> messages = [
           {
             'role': 'system',
             'content': _systemPrompt,
@@ -363,12 +385,133 @@ Remember: Your role is not just to solve the problem, but to make the person fee
         ];
         
         // Add conversation history (limit to last 10 exchanges to avoid token limits)
-        if (conversationHistory.length > 20) {
-          messages.addAll(conversationHistory.sublist(conversationHistory.length - 20));
-        } else {
-          messages.addAll(conversationHistory);
+        final List<Map<String, String>> recentHistory = conversationHistory.length > 20
+            ? conversationHistory.sublist(conversationHistory.length - 20)
+            : conversationHistory;
+
+        messages.addAll(recentHistory.map((m) => <String, dynamic>{
+              'role': m['role'],
+              'content': m['content'],
+            }));
+
+        // If a screenshot is attached, try to send it as a multimodal message.
+        // If anything fails, fall back to a text-only note so the feature never breaks.
+        Map<String, dynamic> userMessage = {
+          'role': 'user',
+          'content': userQuery,
+        };
+
+        if (screenshotPath != null) {
+          try {
+            final file = File(screenshotPath);
+            final exists = await file.exists();
+            if (!exists) {
+              if (kDebugMode) {
+                debugPrint('AIService: screenshot path does not exist: $screenshotPath');
+              }
+            }
+
+            if (exists) {
+              final normalized = userQuery.trim().toLowerCase();
+              final isImageIdQuestion = normalized == 'what is it' ||
+                  normalized == 'what is this' ||
+                  normalized == 'what is that' ||
+                  normalized.contains('what am i looking at') ||
+                  normalized.contains('what is on my screen') ||
+                  normalized.contains('what is this on my screen') ||
+                  normalized.contains('what does this mean') ||
+                  normalized.contains('explain the screenshot') ||
+                  normalized.contains('describe the screenshot');
+
+              final promptText = isImageIdQuestion
+                  ? '$userQuery\n\nLook at the attached screenshot. In Step 1, describe what you see on the screen. Then answer my question.'
+                  : '$userQuery\n\nPlease use the attached screenshot to answer.';
+
+              // iOS screenshots can be HEIC. If we send HEIC bytes mislabeled as PNG/JPEG,
+              // the model will not be able to interpret the image.
+              // To make this reliable, we always convert unsupported/large images to JPEG.
+              final lower = screenshotPath.toLowerCase();
+              final isAlreadySupported =
+                  lower.endsWith('.png') || lower.endsWith('.jpg') || lower.endsWith('.jpeg');
+
+              final originalBytes = await file.readAsBytes();
+
+              // Convert to a supported format when needed.
+              // If conversion fails for an unsupported format, we must NOT send invalid bytes.
+              final _VisionImage? conversion = await _prepareVisionImageBytes(
+                screenshotPath: screenshotPath,
+                originalBytes: originalBytes,
+                isAlreadySupported: isAlreadySupported,
+              );
+
+              if (conversion == null) {
+                if (kDebugMode) {
+                  debugPrint(
+                    'AIService: screenshot conversion failed (unsupported format). path=$screenshotPath',
+                  );
+                }
+                userMessage = {
+                  'role': 'user',
+                  'content':
+                      '$promptText\n\nNote: A screenshot was attached, but the app could not upload it.',
+                };
+              } else {
+                if (kDebugMode) {
+                  debugPrint(
+                    'AIService: screenshot attach path=$screenshotPath supported=$isAlreadySupported original=${originalBytes.length} final=${conversion.bytes.length} mime=${conversion.mime}',
+                  );
+                }
+
+                // If still too large, gracefully fall back.
+                if (conversion.bytes.length > 4 * 1024 * 1024) {
+                  if (kDebugMode) {
+                    debugPrint(
+                      'AIService: screenshot too large after conversion: ${conversion.bytes.length} bytes',
+                    );
+                  }
+                  userMessage = {
+                    'role': 'user',
+                    'content':
+                        '$promptText\n\nNote: The screenshot was too large to upload from the app.',
+                  };
+                } else {
+                  final b64 = base64Encode(conversion.bytes);
+                  final dataUrl = 'data:${conversion.mime};base64,$b64';
+
+                  if (kDebugMode) {
+                    debugPrint('AIService: sending multimodal message (text + image_url)');
+                  }
+
+                  userMessage = {
+                    'role': 'user',
+                    'content': [
+                      {
+                        'type': 'text',
+                        'text': promptText,
+                      },
+                      {
+                        'type': 'image_url',
+                        'image_url': {
+                          'url': dataUrl,
+                          'detail': 'low',
+                        }
+                      }
+                    ],
+                  };
+                }
+              }
+            }
+          } catch (_) {
+            if (kDebugMode) {
+              debugPrint('AIService: exception while attaching screenshot');
+            }
+            userMessage = {
+              'role': 'user',
+              'content': '$userQuery\n\nNote: A screenshot was attached.',
+            };
+          }
         }
-        
+
         final response = await http.post(
           Uri.parse(_baseUrl),
           headers: {
@@ -377,7 +520,10 @@ Remember: Your role is not just to solve the problem, but to make the person fee
           },
           body: jsonEncode({
             'model': _model,
-            'messages': messages,
+            'messages': [
+              ...messages,
+              userMessage,
+            ],
             'max_tokens': 1500, // Increased to prevent cut-off responses
             'temperature': 0.7, // Balanced creativity and consistency
             'frequency_penalty': 0.0,
@@ -443,6 +589,48 @@ Remember: Your role is not just to solve the problem, but to make the person fee
     return 'I\'m having trouble right now. Please try again in a moment.';
   }
 
+  Future<_VisionImage?> _prepareVisionImageBytes({
+    required String screenshotPath,
+    required List<int> originalBytes,
+    required bool isAlreadySupported,
+  }) async {
+    final lower = screenshotPath.toLowerCase();
+    final isPng = lower.endsWith('.png');
+
+    // Keep small, already-supported images as-is.
+    if (isAlreadySupported && originalBytes.length <= 2 * 1024 * 1024) {
+      return _VisionImage(
+        bytes: originalBytes,
+        mime: isPng ? 'image/png' : 'image/jpeg',
+      );
+    }
+
+    // Convert/compress to JPEG for reliability and size.
+    final Uint8List? jpegBytes = await FlutterImageCompress.compressWithFile(
+      screenshotPath,
+      quality: 85,
+      format: CompressFormat.jpeg,
+      keepExif: false,
+    );
+
+    if (jpegBytes == null) {
+      // If it's an unsupported format and we cannot convert it, do not send invalid bytes.
+      if (!isAlreadySupported) {
+        return null;
+      }
+
+      // If it's a supported format but compression failed, fall back to original bytes.
+      return _VisionImage(
+        bytes: originalBytes,
+        mime: isPng ? 'image/png' : 'image/jpeg',
+      );
+    }
+
+    return _VisionImage(
+      bytes: jpegBytes,
+      mime: 'image/jpeg',
+    );
+  }
   /// Send a query to OpenAI and get a senior-friendly response (legacy method)
   Future<String> getSeniorTechSupport(String userQuery) async {
     // Starting AI request for query
@@ -764,4 +952,14 @@ Once that's done, I'll be able to give you detailed, personalized help with any 
   Future<String> testConnection() async {
     return await getSeniorTechSupport('How do I make a phone call?');
   }
+}
+
+class _VisionImage {
+  final List<int> bytes;
+  final String mime;
+
+  _VisionImage({
+    required this.bytes,
+    required this.mime,
+  });
 }
