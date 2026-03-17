@@ -952,6 +952,221 @@ Once that's done, I'll be able to give you detailed, personalized help with any 
   Future<String> testConnection() async {
     return await getSeniorTechSupport('How do I make a phone call?');
   }
+
+  /// Scam-specific system prompt for analyzing suspicious messages
+  static const String _scamAnalysisPrompt = '''
+You are Pebl, a friendly and protective AI assistant for seniors. The user has uploaded an image of a text message, email, or popup. You must determine if it is a scam/phishing attempt. Be brutally honest. Check for spelling inconsistencies, anything unnatural or weird.
+
+Format your response exactly like this:
+STATUS: [Respond only with SAFE, DANGER, or SUSPICIOUS]
+EXPLANATION: [Explain why in 1-2 very simple, jargon-free sentences. Use a reassuring tone.]
+ACTION: [Tell them exactly what to do next in 1 simple step, e.g., 'Delete this message and do not click any links.']
+
+Important guidelines:
+- DANGER: Clear scam indicators like fake urgency, requests for money/gift cards, suspicious links, impersonation of banks/government/tech support, lottery winnings, threats
+- SUSPICIOUS: Some warning signs but not definitive - unusual sender, slight spelling errors, requests for personal info
+- SAFE: Legitimate message from known contacts or verified businesses with no red flags
+
+Always err on the side of caution to protect seniors. If in doubt, mark as SUSPICIOUS.
+''';
+
+  /// Analyze a screenshot for scam/phishing indicators
+  /// Returns a ScamAnalysisResult with status, explanation, and action
+  Future<ScamAnalysisResult> analyzeScamScreenshot(String screenshotPath) async {
+    if (!isConfigured) {
+      return ScamAnalysisResult(
+        status: ScamStatus.error,
+        explanation: 'I need an API key to help you. Please check your app settings.',
+        action: 'Set up your API key in the app settings.',
+      );
+    }
+
+    for (int attempt = 0; attempt < 3; attempt++) {
+      try {
+        final file = File(screenshotPath);
+        final exists = await file.exists();
+        
+        if (!exists) {
+          return ScamAnalysisResult(
+            status: ScamStatus.error,
+            explanation: 'Could not find the screenshot file.',
+            action: 'Please try selecting the image again.',
+          );
+        }
+
+        final lower = screenshotPath.toLowerCase();
+        final isAlreadySupported =
+            lower.endsWith('.png') || lower.endsWith('.jpg') || lower.endsWith('.jpeg');
+
+        final originalBytes = await file.readAsBytes();
+
+        final _VisionImage? conversion = await _prepareVisionImageBytes(
+          screenshotPath: screenshotPath,
+          originalBytes: originalBytes,
+          isAlreadySupported: isAlreadySupported,
+        );
+
+        if (conversion == null) {
+          return ScamAnalysisResult(
+            status: ScamStatus.error,
+            explanation: 'Could not process this image format.',
+            action: 'Please try with a different screenshot.',
+          );
+        }
+
+        if (conversion.bytes.length > 4 * 1024 * 1024) {
+          return ScamAnalysisResult(
+            status: ScamStatus.error,
+            explanation: 'The screenshot is too large to analyze.',
+            action: 'Please try with a smaller image.',
+          );
+        }
+
+        final b64 = base64Encode(conversion.bytes);
+        final dataUrl = 'data:${conversion.mime};base64,$b64';
+
+        final userMessage = {
+          'role': 'user',
+          'content': [
+            {
+              'type': 'text',
+              'text': 'Please analyze this screenshot and determine if it is a scam or phishing attempt.',
+            },
+            {
+              'type': 'image_url',
+              'image_url': {
+                'url': dataUrl,
+                'detail': 'low',
+              }
+            }
+          ],
+        };
+
+        final response = await http.post(
+          Uri.parse(_baseUrl),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $_apiKey',
+          },
+          body: jsonEncode({
+            'model': _model,
+            'messages': [
+              {
+                'role': 'system',
+                'content': _scamAnalysisPrompt,
+              },
+              userMessage,
+            ],
+            'max_tokens': 500,
+            'temperature': 0.3,
+          }),
+        );
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final aiResponse = data['choices'][0]['message']['content'] as String;
+          return _parseScamResponse(aiResponse.trim());
+        } else if (response.statusCode == 429) {
+          if (attempt < 2) {
+            await Future.delayed(Duration(seconds: (attempt + 1) * 2));
+            continue;
+          }
+          return ScamAnalysisResult(
+            status: ScamStatus.error,
+            explanation: 'Too many requests right now.',
+            action: 'Please wait 30 seconds and try again.',
+          );
+        } else {
+          return ScamAnalysisResult(
+            status: ScamStatus.error,
+            explanation: 'Having trouble connecting right now.',
+            action: 'Please try again in a moment.',
+          );
+        }
+      } catch (e) {
+        if (attempt < 2) {
+          await Future.delayed(Duration(seconds: (attempt + 1) * 2));
+          continue;
+        }
+        return ScamAnalysisResult(
+          status: ScamStatus.error,
+          explanation: 'Having trouble connecting to help you.',
+          action: 'Please check your internet connection and try again.',
+        );
+      }
+    }
+
+    return ScamAnalysisResult(
+      status: ScamStatus.error,
+      explanation: 'Having trouble right now.',
+      action: 'Please try again in a moment.',
+    );
+  }
+
+  /// Parse the AI response into a ScamAnalysisResult
+  ScamAnalysisResult _parseScamResponse(String response) {
+    try {
+      String status = '';
+      String explanation = '';
+      String action = '';
+
+      final lines = response.split('\n');
+      for (final line in lines) {
+        final trimmed = line.trim();
+        if (trimmed.toUpperCase().startsWith('STATUS:')) {
+          status = trimmed.substring(7).trim().toUpperCase();
+        } else if (trimmed.toUpperCase().startsWith('EXPLANATION:')) {
+          explanation = trimmed.substring(12).trim();
+        } else if (trimmed.toUpperCase().startsWith('ACTION:')) {
+          action = trimmed.substring(7).trim();
+        }
+      }
+
+      ScamStatus scamStatus;
+      if (status.contains('DANGER')) {
+        scamStatus = ScamStatus.danger;
+      } else if (status.contains('SUSPICIOUS')) {
+        scamStatus = ScamStatus.suspicious;
+      } else if (status.contains('SAFE')) {
+        scamStatus = ScamStatus.safe;
+      } else {
+        scamStatus = ScamStatus.suspicious;
+      }
+
+      return ScamAnalysisResult(
+        status: scamStatus,
+        explanation: explanation.isNotEmpty ? explanation : 'Unable to determine the safety of this message.',
+        action: action.isNotEmpty ? action : 'When in doubt, do not click any links or share personal information.',
+      );
+    } catch (e) {
+      return ScamAnalysisResult(
+        status: ScamStatus.suspicious,
+        explanation: 'Could not fully analyze this message.',
+        action: 'When in doubt, do not click any links or share personal information.',
+      );
+    }
+  }
+}
+
+/// Enum for scam analysis status
+enum ScamStatus {
+  safe,
+  suspicious,
+  danger,
+  error,
+}
+
+/// Result of scam analysis
+class ScamAnalysisResult {
+  final ScamStatus status;
+  final String explanation;
+  final String action;
+
+  ScamAnalysisResult({
+    required this.status,
+    required this.explanation,
+    required this.action,
+  });
 }
 
 class _VisionImage {

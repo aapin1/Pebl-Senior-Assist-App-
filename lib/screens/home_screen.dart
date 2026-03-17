@@ -3,6 +3,7 @@ import '../services/accessibility_service.dart';
 import 'demo_screen.dart';
 import 'accessibility_setup_screen.dart';
 import 'input_method_choice_screen.dart';
+import 'scam_analyzer_screen.dart';
 
 /// Responsive Home screen of the Pebl app
 /// Adapts to all screen sizes using percentage-based sizing
@@ -127,9 +128,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     
                     SizedBox(height: screenHeight * 0.02),
               
-                    // Main Menu - Single Tech Help option with controlled height
+                    // Main Menu - Two large buttons: Ask a Question + Is this a Scam?
+                    // Ask a Question button
                     SizedBox(
-                      height: screenHeight * 0.34,
+                      height: screenHeight * 0.16,
                       child: InkWell(
                         onTap: () async {
                           if (context.mounted) {
@@ -176,7 +178,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               SizedBox(height: screenHeight * 0.008),
                               Flexible(
                                 child: Text(
-                                  'Ask Me Anything!',
+                                  'Ask a Question',
                                   style: TextStyle(
                                     fontSize: baseTextSize * 1.1 * _accessibilityService.textSizeMultiplier,
                                     fontWeight: FontWeight.bold,
@@ -191,6 +193,87 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               Flexible(
                                 child: Text(
                                   'Get help with tech',
+                                  style: TextStyle(
+                                    fontSize: baseTextSize * 0.75 * _accessibilityService.textSizeMultiplier,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    
+                    SizedBox(height: screenHeight * 0.015),
+                    
+                    // Is this a Scam? button
+                    SizedBox(
+                      height: screenHeight * 0.16,
+                      child: InkWell(
+                        onTap: () async {
+                          if (context.mounted) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ScamAnalyzerScreen(
+                                  accessibilityService: _accessibilityService,
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: screenWidth * 0.03,
+                            vertical: screenHeight * 0.01,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.95),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Colors.orange.shade400,
+                              width: 2,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.orange.shade200.withOpacity(0.3),
+                                blurRadius: 15,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.shield,
+                                size: screenHeight * 0.045,
+                                color: Colors.orange.shade600,
+                              ),
+                              SizedBox(height: screenHeight * 0.008),
+                              Flexible(
+                                child: Text(
+                                  'Is this a Scam?',
+                                  style: TextStyle(
+                                    fontSize: baseTextSize * 1.1 * _accessibilityService.textSizeMultiplier,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.orange.shade800,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              SizedBox(height: screenHeight * 0.004),
+                              Flexible(
+                                child: Text(
+                                  'Check suspicious messages',
                                   style: TextStyle(
                                     fontSize: baseTextSize * 0.75 * _accessibilityService.textSizeMultiplier,
                                     color: Colors.grey.shade600,
