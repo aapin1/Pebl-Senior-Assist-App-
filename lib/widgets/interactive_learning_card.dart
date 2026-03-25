@@ -1,8 +1,13 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:speech_to_text/speech_to_text.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import '../services/accessibility_service.dart';
 import '../services/ai_service.dart';
+import '../services/settings_linker.dart';
 
 /// Model for a learning step in the interactive system
 class LearningStep {
@@ -31,6 +36,8 @@ class InteractiveLearningCard extends StatefulWidget {
   final Function(bool completed) onComplete;
   final AccessibilityService accessibilityService;
   final Function(String)? onStepRead;
+  final String? deepLink;
+  final String? userQuestion;
 
   const InteractiveLearningCard({
     super.key,
@@ -38,6 +45,8 @@ class InteractiveLearningCard extends StatefulWidget {
     required this.onComplete,
     required this.accessibilityService,
     this.onStepRead,
+    this.deepLink,
+    this.userQuestion,
   });
 
   @override
@@ -67,6 +76,10 @@ class _InteractiveLearningCardState extends State<InteractiveLearningCard>
   String followUpAnswer = '';
   bool showFollowUpAnswer = false;
   Timer? _speechTimeout;
+  
+  // Deep link state - only show button if verified
+  SettingsLinkResult? _verifiedDeepLink;
+  bool _deepLinkVerified = false;
 
   @override
   void initState() {
@@ -79,6 +92,134 @@ class _InteractiveLearningCardState extends State<InteractiveLearningCard>
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
     _animationController.forward();
+    
+    // Verify deep link if provided
+    _verifyDeepLink();
+  }
+  
+  /// Verify the deep link is valid and launchable before showing button
+  Future<void> _verifyDeepLink() async {
+    if (widget.deepLink == null || widget.deepLink!.isEmpty) {
+      return;
+    }
+    
+    final result = await SettingsLinker.verifyAndGetLink(widget.deepLink);
+    
+    if (mounted) {
+      setState(() {
+        _verifiedDeepLink = result;
+        _deepLinkVerified = result.isValid;
+      });
+    }
+  }
+  
+  /// Launch the verified settings URL
+  Future<void> _launchSettingsLink() async {
+    if (_verifiedDeepLink == null || !_verifiedDeepLink!.isValid) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'This feature is not available for this step.',
+              style: TextStyle(
+                fontSize: 16 * widget.accessibilityService.textSizeMultiplier,
+              ),
+            ),
+            backgroundColor: Colors.orange.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+    
+    try {
+      // Use category-based launch for better reliability
+      final launched = await SettingsLinker.launchSettingsForCategory(
+        _verifiedDeepLink!.category,
+      );
+
+      if (!launched && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'This feature is not available for this step.',
+              style: TextStyle(
+                fontSize: 16 * widget.accessibilityService.textSizeMultiplier,
+              ),
+            ),
+            backgroundColor: Colors.orange.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'This feature is not available for this step.',
+              style: TextStyle(
+                fontSize: 16 * widget.accessibilityService.textSizeMultiplier,
+              ),
+            ),
+            backgroundColor: Colors.orange.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+  
+  /// Share the question and steps with family via native share sheet
+  Future<void> _shareWithFamily() async {
+    // Build the share message
+    final StringBuffer message = StringBuffer();
+    
+    // Add the user's question
+    final question = widget.userQuestion ?? 'a tech question';
+    message.writeln('Hi! I\'m using Pebl to figure out: $question');
+    message.writeln();
+    message.writeln('Pebl gave me these steps:');
+    
+    // Add all steps
+    for (int i = 0; i < widget.steps.length; i++) {
+      final step = widget.steps[i];
+      message.writeln('${i + 1}. ${step.title}');
+      message.writeln('   ${step.content}');
+      message.writeln();
+    }
+    
+    message.writeln('But I\'m still a little stuck. Can you help me with this?');
+    
+    // Get the render box for share position (required on iPad)
+    final box = context.findRenderObject() as RenderBox?;
+    final sharePositionOrigin = box != null 
+        ? box.localToGlobal(Offset.zero) & box.size
+        : const Rect.fromLTWH(0, 0, 100, 100);
+    
+    try {
+      // Load app icon from assets and save to temp file for sharing
+      final byteData = await rootBundle.load('assets/icons/app_icon_1024.png');
+      final tempDir = await getTemporaryDirectory();
+      final iconFile = File('${tempDir.path}/pebl_share_icon.png');
+      await iconFile.writeAsBytes(byteData.buffer.asUint8List());
+      
+      // Share with image (shows logo in share sheet)
+      await Share.shareXFiles(
+        [XFile(iconFile.path)],
+        text: message.toString(),
+        subject: 'Help me with: $question',
+        sharePositionOrigin: sharePositionOrigin,
+      );
+    } catch (e) {
+      // Fallback to text-only share if image fails
+      await Share.share(
+        message.toString(),
+        subject: 'Help me with: $question',
+        sharePositionOrigin: sharePositionOrigin,
+      );
+    }
   }
 
   @override
@@ -437,6 +578,50 @@ class _InteractiveLearningCardState extends State<InteractiveLearningCard>
                   ),
                 ),
                 
+                // "Open Settings For Me" button - ONLY shown if deep link is verified
+                if (_deepLinkVerified && _verifiedDeepLink != null && _verifiedDeepLink!.isValid) ...[
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 80,
+                    child: ElevatedButton(
+                      onPressed: _launchSettingsLink,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green.shade600,
+                        foregroundColor: Colors.white,
+                        elevation: 4,
+                        shadowColor: Colors.green.shade300,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.settings,
+                              size: 28,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Open ${SettingsLinker.getCategoryLabel(_verifiedDeepLink!.category ?? '')}',
+                              style: TextStyle(
+                                fontSize: 18 * widget.accessibilityService.textSizeMultiplier,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+                
                 // Question section
                 if (showQuestion && currentStep.question != null) ...[
                   const SizedBox(height: 20),
@@ -783,19 +968,13 @@ class _InteractiveLearningCardState extends State<InteractiveLearningCard>
                                 ? Icons.check
                                 : Icons.arrow_forward,
                           ),
-                          label: Flexible(
-                            child: Text(
-                              currentStepIndex == widget.steps.length - 1
-                                  ? 'Complete'
-                                  : 'Continue',
-                              style: TextStyle(
-                                fontSize: 13 * widget.accessibilityService.textSizeMultiplier,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              softWrap: false,
-                              textAlign: TextAlign.center,
+                          label: Text(
+                            currentStepIndex == widget.steps.length - 1
+                                ? 'Done'
+                                : 'Next',
+                            style: TextStyle(
+                              fontSize: 14 * widget.accessibilityService.textSizeMultiplier,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
@@ -929,8 +1108,44 @@ class _InteractiveLearningCardState extends State<InteractiveLearningCard>
                       ),
                     ),
                   ],
+                  
                 ],
                 
+                // "Share with Family" button - always visible for human handoff
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 80,
+                  child: OutlinedButton.icon(
+                    onPressed: _shareWithFamily,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.purple.shade700,
+                      side: BorderSide(
+                        color: Colors.purple.shade400,
+                        width: 2,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    icon: Icon(
+                      Icons.share,
+                      size: 28,
+                      color: Colors.purple.shade600,
+                    ),
+                    label: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        "I'm Still Stuck - Share with Family",
+                        style: TextStyle(
+                          fontSize: 16 * widget.accessibilityService.textSizeMultiplier,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.purple.shade700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),

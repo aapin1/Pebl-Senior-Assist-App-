@@ -85,6 +85,31 @@ Keep answers short but detailed: not overwhelming, but not too vague either.
 Assume the user may have vision difficulties — so emphasize clarity, like saying "the blue button near the bottom right."
 
 Remember: Your role is not just to solve the problem, but to make the person feel comfortable and confident using their Apple device. Keep formatting simple and clean without any markdown symbols.
+
+DEEP LINK FEATURE:
+When your solution involves opening one of these TOP-LEVEL iOS Settings pages, you SHOULD include a "deepLink" field in your JSON response to help the user navigate there directly:
+
+Available deep links (use these exact values):
+- "WIFI" - for Wi-Fi settings (connecting to networks, turning Wi-Fi on/off)
+- "BLUETOOTH" - for Bluetooth settings (pairing devices, turning Bluetooth on/off)
+- "ACCESSIBILITY" - for Accessibility settings (text size, VoiceOver, display accommodations)
+- "DISPLAY" - for Display & Brightness settings (brightness, text size, dark mode)
+- "CELLULAR" - for Cellular/Mobile Data settings (data usage, cellular on/off)
+
+IMPORTANT: Only include deepLink for these 5 top-level settings. Do NOT include deepLink for:
+- Nested settings (like a specific app's settings)
+- Settings that require the user to navigate further
+- Any setting not in the list above
+
+Example JSON with deep link:
+{
+  "steps": [
+    {"title": "Step 1: Open Wi-Fi Settings", "content": "First, let's open your Wi-Fi settings.", "requiresConfirmation": true}
+  ],
+  "deepLink": "WIFI"
+}
+
+If the user asks about Wi-Fi, Bluetooth, Accessibility, Display/Brightness, or Cellular data - INCLUDE the appropriate deepLink!
 ''';
 
   /// Send a query to OpenAI with conversation history and get structured learning steps
@@ -99,11 +124,26 @@ Remember: Your role is not just to solve the problem, but to make the person fee
       conversationHistory,
       screenshotPath: screenshotPath,
     );
+    return _parseResponseToSteps(response).steps;
+  }
+  
+  /// Send a query and get both learning steps AND deep link (if any)
+  /// This is the preferred method for screens that support deep linking
+  Future<LearningStepsWithDeepLink> getSeniorTechSupportWithDeepLink(
+    String userQuery,
+    List<Map<String, String>> conversationHistory, {
+    String? screenshotPath,
+  }) async {
+    final response = await getSeniorTechSupportWithHistory(
+      userQuery,
+      conversationHistory,
+      screenshotPath: screenshotPath,
+    );
     return _parseResponseToSteps(response);
   }
 
-  /// Parse AI response JSON into LearningStep objects
-  List<LearningStep> _parseResponseToSteps(String response) {
+  /// Parse AI response JSON into LearningStep objects and extract deep link if present
+  LearningStepsWithDeepLink _parseResponseToSteps(String response) {
     // Parsing response for learning steps
     
     try {
@@ -126,6 +166,29 @@ Remember: Your role is not just to solve the problem, but to make the person fee
       
       final jsonResponse = jsonDecode(cleanResponse);
       final stepsJson = jsonResponse['steps'] as List;
+      
+      // Extract deep link - first check if AI provided one, then auto-detect from content
+      String? deepLink;
+      
+      // Method 1: Check if AI explicitly provided a deepLink field
+      if (jsonResponse.containsKey('deepLink')) {
+        final rawDeepLink = jsonResponse['deepLink']?.toString().toUpperCase().trim();
+        const allowedLinks = ['WIFI', 'BLUETOOTH', 'ACCESSIBILITY', 'DISPLAY', 'CELLULAR'];
+        if (rawDeepLink != null && allowedLinks.contains(rawDeepLink)) {
+          deepLink = rawDeepLink;
+          if (kDebugMode) {
+            debugPrint('AIService: Found explicit deepLink: $deepLink');
+          }
+        }
+      }
+      
+      // Method 2: Auto-detect from step content if no explicit deepLink
+      if (deepLink == null) {
+        deepLink = _autoDetectDeepLink(stepsJson);
+        if (deepLink != null && kDebugMode) {
+          debugPrint('AIService: Auto-detected deepLink: $deepLink');
+        }
+      }
       
       // Successfully parsed steps
       
@@ -150,7 +213,7 @@ Remember: Your role is not just to solve the problem, but to make the person fee
         );
       }).toList();
       
-      return parsedSteps;
+      return LearningStepsWithDeepLink(steps: parsedSteps, deepLink: deepLink);
     } catch (e) {
       // JSON parsing failed
       // Raw response fallback
@@ -233,8 +296,8 @@ Remember: Your role is not just to solve the problem, but to make the person fee
       
       // If we found steps, return them; otherwise create a single step
       if (fallbackSteps.isNotEmpty) {
-        // Returning fallback steps
-        return fallbackSteps;
+        // Returning fallback steps (no deep link in fallback)
+        return LearningStepsWithDeepLink(steps: fallbackSteps, deepLink: null);
       } else {
         // Better content extraction for single step fallback
         String cleanContent = response
@@ -285,8 +348,8 @@ Remember: Your role is not just to solve the problem, but to make the person fee
           
           // If we successfully extracted multiple steps, return them
           if (extractedSteps.length > 1) {
-            // Extracted steps from cleaned content
-            return extractedSteps;
+            // Extracted steps from cleaned content (no deep link in fallback)
+            return LearningStepsWithDeepLink(steps: extractedSteps, deepLink: null);
           }
         }
         
@@ -314,27 +377,194 @@ Remember: Your role is not just to solve the problem, but to make the person fee
                 cleanContent = extractedTitle;
                 extractedTitle = 'Step-by-Step Help';
               }
-              return [
-                LearningStep(
-                  title: extractedTitle,
-                  content: cleanContent,
-                  requiresConfirmation: true,
-                ),
-              ];
+              return LearningStepsWithDeepLink(
+                steps: [
+                  LearningStep(
+                    title: extractedTitle,
+                    content: cleanContent,
+                    requiresConfirmation: true,
+                  ),
+                ],
+                deepLink: null,
+              );
             }
           }
         }
         
-        // Creating single fallback step
-        return [
-          LearningStep(
-            title: 'Step-by-Step Help',
-            content: cleanContent,
-            requiresConfirmation: true,
-          ),
-        ];
+        // Creating single fallback step (no deep link in fallback)
+        return LearningStepsWithDeepLink(
+          steps: [
+            LearningStep(
+              title: 'Step-by-Step Help',
+              content: cleanContent,
+              requiresConfirmation: true,
+            ),
+          ],
+          deepLink: null,
+        );
       }
     }
+  }
+
+  /// Auto-detect deep link from step content by scanning for keywords
+  /// Returns the appropriate deep link category or null if none detected
+  String? _autoDetectDeepLink(List<dynamic> stepsJson) {
+    // Combine all step content for analysis
+    final allContent = stepsJson.map((step) {
+      final title = (step['title'] ?? '').toString().toLowerCase();
+      final content = (step['content'] ?? '').toString().toLowerCase();
+      return '$title $content';
+    }).join(' ');
+    
+    // === SETTINGS CATEGORIES ===
+    
+    // Check for Wi-Fi related content
+    if (_containsWifiKeywords(allContent)) {
+      return 'WIFI';
+    }
+    
+    // Check for Bluetooth related content
+    if (_containsBluetoothKeywords(allContent)) {
+      return 'BLUETOOTH';
+    }
+    
+    // Check for Accessibility related content
+    if (_containsAccessibilityKeywords(allContent)) {
+      return 'ACCESSIBILITY';
+    }
+    
+    // Check for Display/Brightness related content
+    if (_containsDisplayKeywords(allContent)) {
+      return 'DISPLAY';
+    }
+    
+    // Check for Cellular/Mobile Data related content
+    if (_containsCellularKeywords(allContent)) {
+      return 'CELLULAR';
+    }
+    
+    // === APP CATEGORIES ===
+    
+    // Check for Contacts related content
+    if (_containsContactsKeywords(allContent)) {
+      return 'CONTACTS';
+    }
+    
+    // Check for Messages related content
+    if (_containsMessagesKeywords(allContent)) {
+      return 'MESSAGES';
+    }
+    
+    // Check for Phone related content
+    if (_containsPhoneKeywords(allContent)) {
+      return 'PHONE';
+    }
+    
+    // Check for Mail related content
+    if (_containsMailKeywords(allContent)) {
+      return 'MAIL';
+    }
+    
+    // Check for Photos related content
+    if (_containsPhotosKeywords(allContent)) {
+      return 'PHOTOS';
+    }
+    
+    // Check for Camera related content
+    if (_containsCameraKeywords(allContent)) {
+      return 'CAMERA';
+    }
+    
+    // Check for Maps related content
+    if (_containsMapsKeywords(allContent)) {
+      return 'MAPS';
+    }
+    
+    // Check for Calendar related content
+    if (_containsCalendarKeywords(allContent)) {
+      return 'CALENDAR';
+    }
+    
+    // Check for Notes related content
+    if (_containsNotesKeywords(allContent)) {
+      return 'NOTES';
+    }
+    
+    return null;
+  }
+  
+  // === SETTINGS KEYWORD DETECTORS ===
+  
+  bool _containsWifiKeywords(String content) {
+    final keywords = ['wi-fi', 'wifi', 'wi fi', 'wireless network', 'connect to network', 'network settings'];
+    return keywords.any((kw) => content.contains(kw));
+  }
+  
+  bool _containsBluetoothKeywords(String content) {
+    final keywords = ['bluetooth', 'pair device', 'pairing', 'wireless headphone', 'airpods', 'wireless speaker'];
+    return keywords.any((kw) => content.contains(kw));
+  }
+  
+  bool _containsAccessibilityKeywords(String content) {
+    final keywords = ['accessibility', 'voiceover', 'zoom', 'magnifier', 'spoken content', 'display accommodations', 'larger text'];
+    return keywords.any((kw) => content.contains(kw));
+  }
+  
+  bool _containsDisplayKeywords(String content) {
+    final keywords = ['brightness', 'dark mode', 'light mode', 'display settings', 'text size', 'bold text', 'night shift'];
+    return keywords.any((kw) => content.contains(kw));
+  }
+  
+  bool _containsCellularKeywords(String content) {
+    final keywords = ['cellular', 'mobile data', 'data roaming', 'cellular data', 'mobile network', 'lte', '5g settings'];
+    return keywords.any((kw) => content.contains(kw));
+  }
+  
+  // === APP KEYWORD DETECTORS ===
+  
+  bool _containsContactsKeywords(String content) {
+    final keywords = ['contacts app', 'open contacts', 'find contact', 'add contact', 'contact list', 'phone book', 'address book'];
+    return keywords.any((kw) => content.contains(kw));
+  }
+  
+  bool _containsMessagesKeywords(String content) {
+    final keywords = ['messages app', 'open messages', 'send text', 'send message', 'imessage', 'text message', 'sms'];
+    return keywords.any((kw) => content.contains(kw));
+  }
+  
+  bool _containsPhoneKeywords(String content) {
+    final keywords = ['phone app', 'open phone', 'make call', 'dial number', 'call someone', 'phone call'];
+    return keywords.any((kw) => content.contains(kw));
+  }
+  
+  bool _containsMailKeywords(String content) {
+    final keywords = ['mail app', 'open mail', 'send email', 'email app', 'check email', 'compose email'];
+    return keywords.any((kw) => content.contains(kw));
+  }
+  
+  bool _containsPhotosKeywords(String content) {
+    final keywords = ['photos app', 'open photos', 'photo library', 'camera roll', 'view photos', 'photo album'];
+    return keywords.any((kw) => content.contains(kw));
+  }
+  
+  bool _containsCameraKeywords(String content) {
+    final keywords = ['camera app', 'open camera', 'take photo', 'take picture', 'take a photo'];
+    return keywords.any((kw) => content.contains(kw));
+  }
+  
+  bool _containsMapsKeywords(String content) {
+    final keywords = ['maps app', 'open maps', 'apple maps', 'get directions', 'navigation'];
+    return keywords.any((kw) => content.contains(kw));
+  }
+  
+  bool _containsCalendarKeywords(String content) {
+    final keywords = ['calendar app', 'open calendar', 'add event', 'schedule event', 'calendar event'];
+    return keywords.any((kw) => content.contains(kw));
+  }
+  
+  bool _containsNotesKeywords(String content) {
+    final keywords = ['notes app', 'open notes', 'create note', 'write note', 'apple notes'];
+    return keywords.any((kw) => content.contains(kw));
   }
 
   /// Enhance brief step content with more detailed instructions
@@ -720,7 +950,7 @@ Remember: Your role is not just to solve the problem, but to make the person fee
   /// Get mock learning steps for testing when quota is exceeded
   List<LearningStep> _getMockStepsWithHistory(String userQuery, List<Map<String, String>> conversationHistory) {
     final mockResponse = _getMockResponseWithHistory(userQuery, conversationHistory);
-    return _parseResponseToSteps(mockResponse);
+    return _parseResponseToSteps(mockResponse).steps;
   }
 
   /// Get a mock response with conversation history for testing when quota is exceeded
@@ -1166,6 +1396,17 @@ class ScamAnalysisResult {
     required this.status,
     required this.explanation,
     required this.action,
+  });
+}
+
+/// Result containing learning steps and optional deep link
+class LearningStepsWithDeepLink {
+  final List<LearningStep> steps;
+  final String? deepLink;
+
+  LearningStepsWithDeepLink({
+    required this.steps,
+    this.deepLink,
   });
 }
 

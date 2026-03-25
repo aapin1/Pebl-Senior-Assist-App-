@@ -4,6 +4,7 @@ import 'demo_screen.dart';
 import 'accessibility_setup_screen.dart';
 import 'input_method_choice_screen.dart';
 import 'scam_analyzer_screen.dart';
+import 'past_questions_screen.dart';
 
 /// Responsive Home screen of the Pebl app
 /// Adapts to all screen sizes using percentage-based sizing
@@ -282,6 +283,93 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    
+                    SizedBox(height: screenHeight * 0.015),
+                    
+                    // My Past Questions button
+                    SizedBox(
+                      height: screenHeight * 0.12,
+                      child: InkWell(
+                        onTap: () async {
+                          if (context.mounted) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => PastQuestionsScreen(
+                                  accessibilityService: _accessibilityService,
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: screenWidth * 0.03,
+                            vertical: screenHeight * 0.01,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.95),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Colors.purple.shade400,
+                              width: 2,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.purple.shade200.withOpacity(0.3),
+                                blurRadius: 15,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.history,
+                                size: screenHeight * 0.04,
+                                color: Colors.purple.shade600,
+                              ),
+                              SizedBox(width: screenWidth * 0.03),
+                              Flexible(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'My Past Questions',
+                                      style: TextStyle(
+                                        fontSize: baseTextSize * 1.0 * _accessibilityService.textSizeMultiplier,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.purple.shade800,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      'See previous answers',
+                                      style: TextStyle(
+                                        fontSize: baseTextSize * 0.7 * _accessibilityService.textSizeMultiplier,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(
+                                Icons.chevron_right,
+                                size: screenHeight * 0.035,
+                                color: Colors.purple.shade400,
                               ),
                             ],
                           ),

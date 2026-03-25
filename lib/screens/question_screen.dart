@@ -8,6 +8,7 @@ import '../widgets/microphone_button.dart';
 import '../widgets/interactive_learning_card.dart';
 import '../services/ai_service.dart';
 import '../services/accessibility_service.dart';
+import '../services/question_history_service.dart';
 
 /// Dedicated question screen with large microphone button
 /// Simple interface for seniors to ask questions
@@ -33,6 +34,12 @@ class _QuestionScreenState extends State<QuestionScreen> {
   // AI service instance for processing questions
   final AIService _aiService = AIService();
   
+  // Question history service for saving questions locally
+  final QuestionHistoryService _historyService = QuestionHistoryService();
+  
+  // Store the current user question for history saving
+  String _currentUserQuestion = '';
+  
   // Track whether the app is currently listening for voice input
   bool _isListening = false;
   
@@ -47,6 +54,9 @@ class _QuestionScreenState extends State<QuestionScreen> {
   
   // Store AI learning steps response
   List<LearningStep> _learningSteps = [];
+  
+  // Store verified deep link from AI response (if any)
+  String? _deepLink;
   
   // Track if learning is active (showing step-by-step cards)
   bool _isLearningActive = false;
@@ -273,6 +283,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
     setState(() {
       _isProcessing = true;
       _isListening = false;
+      _currentUserQuestion = question;
     });
 
     try {
@@ -282,12 +293,19 @@ class _QuestionScreenState extends State<QuestionScreen> {
         'content': question,
       });
 
-      // Get AI response as learning steps, passing along any attached screenshot path
+      // Get AI response as learning steps WITH deep link support
       final String? screenshotPath = _screenshotFile?.path;
-      List<LearningStep> steps = await _aiService.getSeniorTechSupportStepsWithHistory(
+      final result = await _aiService.getSeniorTechSupportWithDeepLink(
         question,
         _conversationHistory,
         screenshotPath: screenshotPath,
+      );
+      
+      // Save to local history for "Past Questions" feature
+      await _historyService.saveQuestion(
+        userQuestion: question,
+        steps: result.steps,
+        deepLink: result.deepLink,
       );
       
       // Show scroll reminder after a short delay
@@ -309,21 +327,22 @@ class _QuestionScreenState extends State<QuestionScreen> {
       });
       
       // Add AI response to conversation history
-      String aiContent = steps.map((step) => '${step.title}: ${step.content}').join('\n');
+      String aiContent = result.steps.map((step) => '${step.title}: ${step.content}').join('\n');
       _conversationHistory.add({
         'role': 'assistant', 
         'content': aiContent,
       });
 
       setState(() {
-        _learningSteps = steps;
+        _learningSteps = result.steps;
+        _deepLink = result.deepLink;
         _isLearningActive = true;
         _isProcessing = false;
       });
 
       // Read the first step aloud if audio is enabled
-      if (widget.accessibilityService.isAudioEnabled && steps.isNotEmpty) {
-        await _safeSpeak(steps.first.content);
+      if (widget.accessibilityService.isAudioEnabled && result.steps.isNotEmpty) {
+        await _safeSpeak(result.steps.first.content);
       }
 
     } catch (e) {
@@ -341,6 +360,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
     setState(() {
       _transcribedText = '';
       _learningSteps = [];
+      _deepLink = null;
       _isLearningActive = false;
       _isProcessing = false;
       _conversationHistory.clear();
@@ -711,6 +731,8 @@ class _QuestionScreenState extends State<QuestionScreen> {
                             steps: _learningSteps,
                             accessibilityService: widget.accessibilityService,
                             onStepRead: _handleStepTts,
+                            deepLink: _deepLink,
+                            userQuestion: _currentUserQuestion,
                             onComplete: (success) async {
                               if (success) {
                                 _clearAll();
