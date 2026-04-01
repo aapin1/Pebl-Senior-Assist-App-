@@ -1,75 +1,64 @@
-# Privacy Policy for Pebl - Tech Assistant
+# Privacy Policy for Pebl
 
-**Effective Date:** October 6, 2025
+**Effective Date:** April 1, 2026
 
 ## Overview
-Pebl - Tech Assistant ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how our mobile application collects, uses, and protects your information.
+Pebl ("we," "our," or "us") helps users get step-by-step tech support using voice, typed questions, and optional screenshots. This policy explains what data is used and how it is handled.
 
-## Information We Collect
+## Data We Process
 
-### Voice Data
-- When you use the voice feature, your speech is converted to text and sent to OpenAI's servers for processing
-- Voice recordings are not stored permanently on your device or our servers
-- Audio data is processed in real-time to provide AI-powered responses
+### Questions and Inputs
+- Text questions entered by the user.
+- Voice input (processed for speech-to-text when the user enables microphone use).
+- Optional screenshots selected by the user to provide context.
 
-### Usage Data
-- Questions you ask through voice or text input
-- AI responses generated for your queries
-- App usage patterns and interactions (anonymous)
-- This data is processed by OpenAI to provide functionality
+### Generated Responses
+- AI-generated guidance and follow-up responses shown in the app.
 
-## How We Use Your Information
-- **Primary Purpose:** To provide AI-powered technology assistance and step-by-step guidance
-- **Processing:** Voice and text data is sent to OpenAI's API for natural language processing
-- **No Personal Storage:** We do not permanently store your personal conversations, voice data, or personally identifiable information
+### Local On-Device History
+- Recent question history may be stored locally on the device to support the Past Questions feature.
+- This local history is kept on the user’s device and can be cleared by removing app data or uninstalling the app.
 
-## Third-Party Services
+## How We Use Data
+- To generate support responses and step-by-step guidance.
+- To improve usability features within the app session.
+- To provide optional local history functionality on the device.
+
+## Third-Party Processing
 
 ### OpenAI
-- We use OpenAI's API to process your questions and generate helpful responses
-- Your data is subject to OpenAI's Privacy Policy: https://openai.com/privacy/
-- OpenAI may temporarily process your data to provide responses but does not use it for training
+- User questions and optional screenshots are sent to OpenAI to generate responses.
+- OpenAI processes requests according to their policies: https://openai.com/privacy/
+
+## Tracking and Advertising
+- Pebl does **not** track users across third-party apps or websites.
+- Pebl does **not** use IDFA for advertising or cross-app tracking.
+- Pebl does **not** include third-party advertising SDKs.
+- Pebl does **not** sell personal data.
+
+Because Pebl does not perform cross-app tracking, App Tracking Transparency (ATT) permission is not requested.
 
 ## Data Security
-- All data transmission uses industry-standard HTTPS encryption
-- We implement appropriate security measures to protect your information
-- No personal identifying information is required to use the app
+- Data is transmitted over secure HTTPS connections.
+- Access to device features (microphone, photos, speech recognition) is permission-based on iOS.
 
 ## Data Retention
-- Voice data is not stored after processing
-- Conversation history is not permanently retained
-- Each interaction is processed independently
-
-## Your Rights
-- You can stop using the app at any time
-- No account deletion is necessary as no personal accounts are created
-- You control what information you share through your voice interactions
-- You can request information about data collected by contacting us
-
-## Data Sharing
-- **We do not sell your personal data**
-- Voice and text queries are shared with OpenAI for processing only
+- Voice recordings are not stored by Pebl as permanent audio files.
+- AI request content is sent only for processing the requested feature.
+- Local question history is retained on-device only for user convenience.
 
 ## Children's Privacy
-This app is not intended for children under 13. We do not knowingly collect personal information from children under 13.
+Pebl is not intended for children under 13, and we do not knowingly collect personal information from children under 13.
 
-## International Users
-If you are located outside the United States, please note that the information we collect will be transferred to and processed in the United States where our servers are located.
+## International Use
+If you use Pebl outside the United States, your data may be processed in the United States through third-party infrastructure used to provide app functionality.
 
 ## Changes to This Policy
-We may update this Privacy Policy from time to time. We will notify users of any material changes by updating the effective date at the top of this policy.
+We may update this Privacy Policy from time to time. Updates will be reflected by changing the effective date above.
 
-## Contact Us
-If you have questions about this Privacy Policy or want to exercise your privacy rights, please contact us at:
+## Contact
+If you have privacy questions, contact:
 - Email: support@peblapp.com
-- GitHub: https://github.com/aapin1/app-dev
-
-## Compliance
-This privacy policy complies with applicable privacy laws including:
-- California Consumer Privacy Act (CCPA)
-- General Data Protection Regulation (GDPR) where applicable
-- Apple App Store Privacy Requirements
-- Google Play Store Privacy Requirements
 
 ---
-*Last updated: October 6, 2025*
+*Last updated: April 1, 2026*
