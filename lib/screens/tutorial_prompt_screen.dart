@@ -25,11 +25,16 @@ class TutorialPromptScreen extends StatelessWidget {
           ),
         ),
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(32.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: Padding(
+                    padding: const EdgeInsets.all(32.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
                 // Enhanced icon with multiple shadows and glow effect
                 Container(
                   width: 140,
@@ -114,7 +119,7 @@ class TutorialPromptScreen extends StatelessWidget {
                   ),
                 ),
                 
-                const SizedBox(height: 60),
+                const SizedBox(height: 40),
                 
                 // Enhanced buttons with premium styling
                 Column(
@@ -122,7 +127,7 @@ class TutorialPromptScreen extends StatelessWidget {
                     // Yes button with vibrant gradient and glow
                     Container(
                       width: double.infinity,
-                      height: 65,
+                      constraints: const BoxConstraints(minHeight: 65),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
@@ -158,6 +163,8 @@ class TutorialPromptScreen extends StatelessWidget {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.transparent,
                           shadowColor: Colors.transparent,
+                          minimumSize: const Size.fromHeight(65),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
                           ),
@@ -170,6 +177,9 @@ class TutorialPromptScreen extends StatelessWidget {
                             color: Colors.white,
                             letterSpacing: 0.5,
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
                         ),
                       ),
                     ),
@@ -179,7 +189,7 @@ class TutorialPromptScreen extends StatelessWidget {
                     // No button with glass morphism effect
                     Container(
                       width: double.infinity,
-                      height: 60,
+                      constraints: const BoxConstraints(minHeight: 60),
                       decoration: BoxDecoration(
                         color: Colors.grey.shade600.withOpacity(0.8),
                         borderRadius: BorderRadius.circular(18),
@@ -206,6 +216,8 @@ class TutorialPromptScreen extends StatelessWidget {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.transparent,
                           shadowColor: Colors.transparent,
+                          minimumSize: const Size.fromHeight(60),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(18),
                           ),
@@ -217,13 +229,20 @@ class TutorialPromptScreen extends StatelessWidget {
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
                         ),
                       ),
                     ),
                   ],
                 ),
-              ],
-            ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ),

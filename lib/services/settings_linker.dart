@@ -1,11 +1,71 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:app_settings/app_settings.dart';
 
 /// Deep link service for iOS Settings and Apps
 /// Supports both Settings pages and native iOS apps
 class SettingsLinker {
+  /// iOS settings URLs by category (attempted in order)
+  static const Map<String, List<String>> _iosSettingsUrls = {
+    'WIFI': [
+      'App-prefs:root=WIFI',
+      'App-prefs://',
+      'App-prefs:',
+      'prefs:root=WIFI',
+      'prefs://',
+      'prefs:',
+      'prefs:root',
+    ],
+    'BLUETOOTH': [
+      'App-prefs:root=Bluetooth',
+      'App-prefs://',
+      'App-prefs:',
+      'prefs:root=Bluetooth',
+      'prefs:root=BLUETOOTH',
+      'prefs://',
+      'prefs:',
+      'prefs:root',
+    ],
+    'ACCESSIBILITY': [
+      'App-prefs:root=ACCESSIBILITY',
+      'App-prefs://',
+      'App-prefs:',
+      'prefs:root=ACCESSIBILITY',
+      'prefs://',
+      'prefs:',
+      'prefs:root',
+    ],
+    'DISPLAY': [
+      'App-prefs:root=DISPLAY',
+      'App-prefs://',
+      'App-prefs:',
+      'prefs:root=DISPLAY',
+      'prefs://',
+      'prefs:',
+      'prefs:root',
+    ],
+    'CELLULAR': [
+      'App-prefs:root=MOBILE_DATA_SETTINGS_ID',
+      'App-prefs:root=MOBILE_DATA',
+      'App-prefs://',
+      'App-prefs:',
+      'prefs:root=MOBILE_DATA_SETTINGS_ID',
+      'prefs:root=MOBILE_DATA',
+      'prefs://',
+      'prefs:',
+      'prefs:root',
+    ],
+    'CAMERA': [
+      'App-prefs:root=CAMERA',
+      'App-prefs://',
+      'App-prefs:',
+      'prefs:root=CAMERA',
+      'prefs://',
+      'prefs:',
+      'prefs:root',
+    ],
+  };
+
   /// Settings categories - open the Settings app (App Store safe)
   static const Set<String> _iosSettingsCategories = {
     'WIFI',
@@ -13,26 +73,152 @@ class SettingsLinker {
     'ACCESSIBILITY',
     'DISPLAY',
     'CELLULAR',
+    'CAMERA',
   };
   
-  /// App deep links - these open native iOS apps
-  /// Using URL schemes that are guaranteed to work on iOS
-  static const Map<String, String> _iosAppUrls = {
-    'CONTACTS': 'contacts://',
-    'MESSAGES': 'sms://',
-    'PHONE': 'tel://',
-    'MAIL': 'mailto:',
-    'PHOTOS': 'photos-redirect://',
-    'CAMERA': 'camera://',
-    'MAPS': 'maps://',
-    'CALENDAR': 'calshow://',
-    'NOTES': 'mobilenotes://',
-    'REMINDERS': 'x-apple-reminderkit://',
-    'FACETIME': 'facetime://',
-    'SAFARI': 'x-web-search://',
-    'APP_STORE': 'itms-apps://',
-    'CLOCK': 'clock-alarm://',
-    'WEATHER': 'weather://',
+  /// App deep links — direct app scheme first, App-prefs settings page as fallback.
+  /// Order is based on simctl openurl testing + known real-device behaviour.
+  /// Simulator exit-0 confirmed schemes are marked ✓; device-only schemes are noted.
+  static const Map<String, List<String>> _iosAppUrls = {
+    // contacts:// opens Contacts app (device-only; simulator lacks app) ✓ on device
+    'CONTACTS': [
+      'contacts://',
+      'addressbook://',
+      'App-prefs:root=CONTACTS',
+      'App-prefs://',
+    ],
+    // messages:// opens Messages home (NOT compose) ✓ simulator + device
+    'MESSAGES': [
+      'messages://',
+      'imessage://',
+      'App-prefs:root=MESSAGES',
+      'App-prefs://',
+    ],
+    // Open Settings > Phone to avoid accidental call prompt
+    'PHONE': [
+      'App-prefs:root=Phone',
+      'App-prefs://',
+      'tel://',
+    ],
+    // message:// opens Mail app (device-only); mailto: opens compose (fallback only)
+    'MAIL': [
+      'message://',
+      'App-prefs:root=MAIL',
+      'App-prefs://',
+      'mailto:',
+    ],
+    // photos-redirect:// ✓ simulator + device
+    'PHOTOS': [
+      'photos-redirect://',
+    ],
+    // maps:// ✓ simulator + device
+    'MAPS': [
+      'maps://',
+      'map://',
+      'App-prefs:root=MAPS',
+    ],
+    // calshow:// ✓ simulator + device; x-apple-calevent:// also works
+    'CALENDAR': [
+      'calshow://',
+      'x-apple-calevent://',
+      'App-prefs:root=CALENDAR',
+    ],
+    // mobilenotes:// opens Notes app (device-only)
+    'NOTES': [
+      'mobilenotes://',
+      'App-prefs:root=NOTES',
+      'App-prefs://',
+    ],
+    // x-apple-reminder:// opens Reminders app (device-only)
+    'REMINDERS': [
+      'x-apple-reminder://',
+      'App-prefs:root=REMINDERS',
+      'App-prefs://',
+    ],
+    // facetime:// opens FaceTime app (device-only; simulator lacks app)
+    'FACETIME': [
+      'facetime://',
+      'facetime-audio://',
+      'App-prefs:root=FACETIME',
+      'App-prefs://',
+    ],
+    // x-web-search:// ✓ simulator + device
+    'SAFARI': [
+      'x-web-search://',
+      'App-prefs:root=SAFARI',
+    ],
+    // itms-apps:// opens App Store (device-only; simulator lacks store)
+    'APP_STORE': [
+      'itms-apps://itunes.apple.com',
+      'itms-apps://',
+    ],
+    // weather:// opens Weather app (device-only)
+    'WEATHER': [
+      'weather://',
+      'App-prefs://',
+    ],
+    // applenews:// ✓ simulator + device
+    'NEWS': [
+      'applenews://',
+      'applenewss://',
+    ],
+    // music:// opens Music app (device-only)
+    'MUSIC': [
+      'music://',
+      'musics://',
+      'audio-player-event://',
+      'App-prefs:root=MUSIC',
+      'App-prefs://',
+    ],
+    // videos:// opens TV app (device-only)
+    'TV': [
+      'videos://',
+      'App-prefs:root=TVAPP',
+      'App-prefs://',
+    ],
+    // podcasts:// opens Podcasts app (device-only)
+    'PODCASTS': [
+      'podcasts://',
+      'pcast://',
+      'podcast://',
+      'App-prefs://',
+    ],
+    // shareddocuments:// ✓ simulator + device
+    'FILES': [
+      'shareddocuments://',
+    ],
+    // voicememos:// opens Voice Memos app (device-only)
+    'VOICE_MEMOS': [
+      'voicememos://',
+      'App-prefs:root=VOICE_MEMOS',
+      'App-prefs://',
+    ],
+    // clock-alarm:// opens Clock app (device-only)
+    'CLOCK': [
+      'clock-alarm://',
+      'App-prefs://',
+    ],
+    // shoebox:// ✓ simulator + device
+    'WALLET': [
+      'shoebox://',
+      'App-prefs:root=PASSBOOK',
+    ],
+    // shortcuts:// ✓ simulator + device
+    'SHORTCUTS': [
+      'shortcuts://',
+      'App-prefs:root=SHORTCUTS',
+    ],
+    // ibooks:// opens Books app (device-only)
+    'BOOKS': [
+      'ibooks://',
+      'itms-books://',
+      'App-prefs://',
+    ],
+    // dict:// opens Dictionary app (device-only)
+    'DICTIONARY': [
+      'dict://',
+      'App-prefs://',
+    ],
   };
   
   /// Combined whitelist of all supported categories
@@ -94,8 +280,9 @@ class SettingsLinker {
       );
     }
 
-    // Only app categories get a URL scheme; settings uses app_settings API
-    final Uri? uri = isApp ? Uri.parse(_iosAppUrls[category]!) : null;
+    // Provide representative URL for validated category (launch uses category handlers)
+    final Uri? uri =
+        isApp ? Uri.parse(_iosAppUrls[category]!.first) : null;
 
     if (kDebugMode) {
       debugPrint('SettingsLinker: Approved ${isSettings ? "settings" : "app"} link for $category');
@@ -141,30 +328,58 @@ class SettingsLinker {
     return false;
   }
   
-  /// Launch a Settings page using app_settings (App Store safe)
+  /// Launch a Settings page via iOS Settings URL schemes.
+  /// Returns false when unavailable so UI can show fallback guidance.
   static Future<bool> _launchSettingsPage(String category) async {
     try {
-      switch (category) {
-        case 'WIFI':
-          await AppSettings.openAppSettings(type: AppSettingsType.wifi);
-          break;
-        case 'BLUETOOTH':
-          await AppSettings.openAppSettings(type: AppSettingsType.bluetooth);
-          break;
-        case 'ACCESSIBILITY':
-          await AppSettings.openAppSettings(type: AppSettingsType.accessibility);
-          break;
-        case 'DISPLAY':
-          await AppSettings.openAppSettings(type: AppSettingsType.display);
-          break;
-        case 'CELLULAR':
-          await AppSettings.openAppSettings(type: AppSettingsType.dataRoaming);
-          break;
-        default:
-          await AppSettings.openAppSettings();
+      final candidates = _iosSettingsUrls[category];
+      if (candidates == null || candidates.isEmpty) {
+        if (kDebugMode) {
+          debugPrint('SettingsLinker: No settings candidates for $category');
+        }
+        return false;
       }
-      
-      return true;
+
+      for (final urlString in candidates) {
+        final uri = Uri.parse(urlString);
+
+        if (kDebugMode) {
+          debugPrint('SettingsLinker: Trying settings URL: $urlString');
+        }
+
+        final canLaunch = await canLaunchUrl(uri);
+
+        if (kDebugMode) {
+          debugPrint('SettingsLinker: canLaunch($urlString) = $canLaunch');
+        }
+
+        try {
+          final launched = await launchUrl(
+            uri,
+            mode: LaunchMode.externalApplication,
+          );
+
+          if (kDebugMode) {
+            debugPrint('SettingsLinker: launch($urlString) = $launched');
+          }
+
+          if (launched) {
+            if (kDebugMode) {
+              debugPrint('SettingsLinker: Settings launch succeeded with $urlString');
+            }
+            return true;
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            debugPrint('SettingsLinker: launch($urlString) threw $e');
+          }
+        }
+      }
+
+      if (kDebugMode) {
+        debugPrint('SettingsLinker: All settings URLs failed for $category');
+      }
+      return false;
     } catch (e) {
       if (kDebugMode) {
         debugPrint('SettingsLinker: Failed to launch settings: $e');
@@ -176,25 +391,54 @@ class SettingsLinker {
   /// Launch an iOS app using its URL scheme
   static Future<bool> _launchApp(String category) async {
     try {
-      final urlString = _iosAppUrls[category];
-      if (urlString == null) return false;
-      
-      final uri = Uri.parse(urlString);
-      
-      if (kDebugMode) {
-        debugPrint('SettingsLinker: Launching app URL: $urlString');
+      final candidates = _iosAppUrls[category];
+      if (candidates == null || candidates.isEmpty) {
+        if (kDebugMode) {
+          debugPrint('SettingsLinker: No app candidates for $category');
+        }
+        return false;
       }
-      
-      final launched = await launchUrl(
-        uri,
-        mode: LaunchMode.externalApplication,
-      );
-      
-      if (kDebugMode) {
-        debugPrint('SettingsLinker: App launch result: $launched');
+
+      for (final urlString in candidates) {
+        final uri = Uri.parse(urlString);
+
+        if (kDebugMode) {
+          debugPrint('SettingsLinker: Trying app URL: $urlString');
+        }
+
+        final canLaunch = await canLaunchUrl(uri);
+
+        if (kDebugMode) {
+          debugPrint('SettingsLinker: canLaunch($urlString) = $canLaunch');
+        }
+
+        try {
+          final launched = await launchUrl(
+            uri,
+            mode: LaunchMode.externalApplication,
+          );
+
+          if (kDebugMode) {
+            debugPrint('SettingsLinker: App launch result: $launched');
+          }
+
+          if (launched) {
+            if (kDebugMode) {
+              debugPrint('SettingsLinker: App launch succeeded with $urlString');
+            }
+            return true;
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            debugPrint('SettingsLinker: launch($urlString) threw $e');
+          }
+        }
       }
-      
-      return launched;
+
+      if (kDebugMode) {
+        debugPrint('SettingsLinker: All app URLs failed for $category');
+      }
+      return false;
     } catch (e) {
       if (kDebugMode) {
         debugPrint('SettingsLinker: Failed to launch app: $e');
@@ -233,6 +477,7 @@ class SettingsLinker {
       case 'ACCESSIBILITY':
       case 'DISPLAY':
       case 'CELLULAR':
+      case 'CAMERA':
         return 'Settings';
       // App categories
       case 'CONTACTS':
@@ -245,8 +490,6 @@ class SettingsLinker {
         return 'Mail';
       case 'PHOTOS':
         return 'Photos';
-      case 'CAMERA':
-        return 'Camera';
       case 'MAPS':
         return 'Maps';
       case 'CALENDAR':
@@ -261,10 +504,30 @@ class SettingsLinker {
         return 'Safari';
       case 'APP_STORE':
         return 'App Store';
-      case 'CLOCK':
-        return 'Clock';
       case 'WEATHER':
         return 'Weather';
+      case 'NEWS':
+        return 'News';
+      case 'MUSIC':
+        return 'Music';
+      case 'TV':
+        return 'TV';
+      case 'PODCASTS':
+        return 'Podcasts';
+      case 'FILES':
+        return 'Files';
+      case 'VOICE_MEMOS':
+        return 'Voice Memos';
+      case 'CLOCK':
+        return 'Clock';
+      case 'WALLET':
+        return 'Wallet';
+      case 'SHORTCUTS':
+        return 'Shortcuts';
+      case 'BOOKS':
+        return 'Books';
+      case 'DICTIONARY':
+        return 'Dictionary';
       default:
         return 'App';
     }

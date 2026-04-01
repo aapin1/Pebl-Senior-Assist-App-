@@ -446,41 +446,52 @@ class _AccessibilitySetupScreenState extends State<AccessibilitySetupScreen> {
                 children: [
                   // Previous button
                   if (_currentPage > 0)
-                    ElevatedButton(
-                      onPressed: _previousPage,
+                    Flexible(
+                      child: ElevatedButton(
+                        onPressed: _previousPage,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey.shade600,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size.fromHeight(56),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          'Back',
+                          style: TextStyle(
+                            fontSize: 14 * _accessibilityService.textSizeMultiplier,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                  if (_currentPage > 0) const SizedBox(width: 12),
+                  
+                  // Next/Finish button
+                  Flexible(
+                    child: ElevatedButton(
+                      onPressed: _nextPage,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey.shade600,
+                        backgroundColor: Colors.blue.shade600,
                         foregroundColor: Colors.white,
-                        minimumSize: const Size(100, 45),
+                        minimumSize: const Size.fromHeight(56),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text(
-                        'Back',
+                      child: Text(
+                        _currentPage == _steps.length - 1 ? 'Finish' : 'Next',
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 14 * _accessibilityService.textSizeMultiplier,
                         ),
-                      ),
-                    ),
-                  
-                  const Spacer(),
-                  
-                  // Next/Finish button
-                  ElevatedButton(
-                    onPressed: _nextPage,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue.shade600,
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(120, 45),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(
-                      _currentPage == _steps.length - 1 ? 'Finish' : 'Next',
-                      style: const TextStyle(
-                        fontSize: 16,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   ),

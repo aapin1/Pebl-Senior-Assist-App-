@@ -282,7 +282,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               ),
                               textAlign: TextAlign.center,
                             ),
-                            const SizedBox(height: 60),
+                            const SizedBox(height: 36),
                             // Audio play button
                             ElevatedButton.icon(
                               onPressed: () => _playAudio(step.audioText),
@@ -292,11 +292,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                 style: TextStyle(
                                   fontSize: 16 * _accessibilityService.textSizeMultiplier,
                                 ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
                               ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.blue.shade600,
                                 foregroundColor: Colors.white,
-                                minimumSize: const Size(150, 45),
+                                minimumSize: const Size(180, 56),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -314,38 +318,50 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   child: Row(
                     children: [
                       if (_currentPage > 0)
-                        ElevatedButton(
-                          onPressed: _previousPage,
+                        Flexible(
+                          child: ElevatedButton(
+                            onPressed: _previousPage,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.grey.shade300,
+                              foregroundColor: Colors.grey.shade700,
+                              minimumSize: const Size.fromHeight(56),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Text(
+                              'Previous',
+                              style: TextStyle(
+                                fontSize: 14 * _accessibilityService.textSizeMultiplier,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                      if (_currentPage > 0) const SizedBox(width: 12),
+                      Flexible(
+                        child: ElevatedButton(
+                          onPressed: _currentPage == _steps.length - 1 ? _completeOnboarding : _nextPage,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.grey.shade300,
-                            foregroundColor: Colors.grey.shade700,
-                            minimumSize: const Size(100, 45),
+                            backgroundColor: Colors.blue.shade600,
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size.fromHeight(56),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          child: const Text(
-                            'Previous',
+                          child: Text(
+                            _currentPage == _steps.length - 1 ? 'Finish' : 'Next',
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: 14 * _accessibilityService.textSizeMultiplier,
                             ),
-                          ),
-                        ),
-                      const Spacer(),
-                      ElevatedButton(
-                        onPressed: _currentPage == _steps.length - 1 ? _completeOnboarding : _nextPage,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue.shade600,
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size(120, 45),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Text(
-                          _currentPage == _steps.length - 1 ? 'Finish' : 'Next',
-                          style: const TextStyle(
-                            fontSize: 16,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
                           ),
                         ),
                       ),

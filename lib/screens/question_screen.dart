@@ -414,6 +414,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
             appBar: AppBar(
               backgroundColor: Colors.transparent,
               elevation: 0,
+              leadingWidth: 92,
               leading: Container(
                 padding: const EdgeInsets.only(left: 8.0),
                 child: TextButton(
@@ -421,12 +422,14 @@ class _QuestionScreenState extends State<QuestionScreen> {
                   child: Text(
                     'Back',
                     style: TextStyle(
-                      fontSize: 18 * widget.accessibilityService.textSizeMultiplier,
+                      fontSize: (14 * widget.accessibilityService.textSizeMultiplier)
+                          .clamp(14.0, 26.0),
                       color: Colors.blue.shade700,
                       fontWeight: FontWeight.w600,
                     ),
-                    overflow: TextOverflow.visible,
-                    softWrap: false,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: true,
                   ),
                 ),
               ),
@@ -491,7 +494,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
 
                                 // Large microphone button
                                 SizedBox(
-                                  height: 100, // Fixed height for button area
+                                  height: 110,
                                   child: Center(
                                     child: MicrophoneButton(
                                       isListening: _isListening,
@@ -638,6 +641,10 @@ class _QuestionScreenState extends State<QuestionScreen> {
                                         fontSize: 16 * widget.accessibilityService.textSizeMultiplier,
                                         fontWeight: FontWeight.w600,
                                       ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      softWrap: true,
+                                      textAlign: TextAlign.center,
                                     ),
                                     style: ButtonStyle(
                                       backgroundColor: WidgetStateProperty.resolveWith<Color>(
@@ -658,6 +665,9 @@ class _QuestionScreenState extends State<QuestionScreen> {
                                       ),
                                       padding: const WidgetStatePropertyAll(
                                         EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                                      ),
+                                      minimumSize: const WidgetStatePropertyAll(
+                                        Size.fromHeight(56),
                                       ),
                                       shape: WidgetStatePropertyAll(
                                         RoundedRectangleBorder(
@@ -704,7 +714,8 @@ class _QuestionScreenState extends State<QuestionScreen> {
                                     style: TextStyle(
                                       fontSize: 14 * widget.accessibilityService.textSizeMultiplier,
                                     ),
-                                    overflow: TextOverflow.visible,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                     softWrap: true,
                                     textAlign: TextAlign.center,
                                   ),
@@ -712,6 +723,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
                                     backgroundColor: Colors.blue.shade600,
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                                    minimumSize: const Size.fromHeight(56),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
                                     ),

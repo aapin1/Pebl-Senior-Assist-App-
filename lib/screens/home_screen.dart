@@ -64,14 +64,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ),
             child: SafeArea(
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: screenWidth * 0.04,
-                  vertical: screenHeight * 0.01,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: screenWidth * 0.04,
+                          vertical: screenHeight * 0.01,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
                     SizedBox(height: screenHeight * 0.01),
                     
                     // App icon with shadow - responsive size
@@ -108,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         letterSpacing: 1.0,
                       ),
                       textAlign: TextAlign.center,
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     
@@ -123,7 +128,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         fontWeight: FontWeight.w500,
                       ),
                       textAlign: TextAlign.center,
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     
@@ -131,8 +136,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               
                     // Main Menu - Two large buttons: Ask a Question + Is this a Scam?
                     // Ask a Question button
-                    SizedBox(
-                      height: screenHeight * 0.16,
+                    ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: screenHeight * 0.16),
                       child: InkWell(
                         onTap: () async {
                           if (context.mounted) {
@@ -199,7 +204,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                     color: Colors.grey.shade600,
                                   ),
                                   textAlign: TextAlign.center,
-                                  maxLines: 1,
+                                  maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -212,8 +217,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     SizedBox(height: screenHeight * 0.015),
                     
                     // Is this a Scam? button
-                    SizedBox(
-                      height: screenHeight * 0.16,
+                    ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: screenHeight * 0.16),
                       child: InkWell(
                         onTap: () async {
                           if (context.mounted) {
@@ -280,7 +285,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                     color: Colors.grey.shade600,
                                   ),
                                   textAlign: TextAlign.center,
-                                  maxLines: 1,
+                                  maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -293,8 +298,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     SizedBox(height: screenHeight * 0.015),
                     
                     // My Past Questions button
-                    SizedBox(
-                      height: screenHeight * 0.12,
+                    ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: screenHeight * 0.16),
                       child: InkWell(
                         onTap: () async {
                           if (context.mounted) {
@@ -330,46 +335,43 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               ),
                             ],
                           ),
-                          child: Row(
+                          child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
                                 Icons.history,
-                                size: screenHeight * 0.04,
+                                size: screenHeight * 0.045,
                                 color: Colors.purple.shade600,
                               ),
-                              SizedBox(width: screenWidth * 0.03),
+                              SizedBox(height: screenHeight * 0.008),
                               Flexible(
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     Text(
-                                      'My Past Questions',
+                                      'Past Questions',
                                       style: TextStyle(
                                         fontSize: baseTextSize * 1.0 * _accessibilityService.textSizeMultiplier,
                                         fontWeight: FontWeight.bold,
                                         color: Colors.purple.shade800,
                                       ),
-                                      maxLines: 1,
+                                      maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.center,
                                     ),
                                     Text(
-                                      'See previous answers',
+                                      'Check your history.',
                                       style: TextStyle(
                                         fontSize: baseTextSize * 0.7 * _accessibilityService.textSizeMultiplier,
                                         color: Colors.grey.shade600,
                                       ),
-                                      maxLines: 1,
+                                      maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.center,
                                     ),
                                   ],
                                 ),
-                              ),
-                              Icon(
-                                Icons.chevron_right,
-                                size: screenHeight * 0.035,
-                                color: Colors.purple.shade400,
                               ),
                             ],
                           ),
@@ -380,8 +382,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     SizedBox(height: screenHeight * 0.015),
               
                     // Additional Options - Settings and Demo as tappable cards
-                    SizedBox(
-                      height: screenHeight * 0.11,
+                    ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: screenHeight * 0.11),
                       child: Row(
                         children: [
                           // Settings button - entire card is tappable
@@ -434,7 +436,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                           color: Colors.green.shade700,
                                         ),
                                         textAlign: TextAlign.center,
-                                        maxLines: 1,
+                                        maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
@@ -496,7 +498,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                           color: Colors.orange.shade700,
                                         ),
                                         textAlign: TextAlign.center,
-                                        maxLines: 1,
+                                        maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
@@ -510,8 +512,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                     
                     SizedBox(height: screenHeight * 0.01),
-                  ],
-                ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
           ),

@@ -209,14 +209,14 @@ class _InteractiveLearningCardState extends State<InteractiveLearningCard>
       await Share.shareXFiles(
         [XFile(iconFile.path)],
         text: message.toString(),
-        subject: 'Help me with: $question',
+        subject: 'Pebl Family Help Request',
         sharePositionOrigin: sharePositionOrigin,
       );
     } catch (e) {
       // Fallback to text-only share if image fails
       await Share.share(
         message.toString(),
-        subject: 'Help me with: $question',
+        subject: 'Pebl Family Help Request',
         sharePositionOrigin: sharePositionOrigin,
       );
     }

@@ -161,6 +161,8 @@ class _PastQuestionsScreenState extends State<PastQuestionsScreen> {
                         fontWeight: FontWeight.bold,
                         color: Colors.purple.shade800,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       'Tap any question to see the answer',
@@ -168,6 +170,8 @@ class _PastQuestionsScreenState extends State<PastQuestionsScreen> {
                         fontSize: baseTextSize * 0.75 * widget.accessibilityService.textSizeMultiplier,
                         color: Colors.purple.shade600,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -226,7 +230,6 @@ class _PastQuestionsScreenState extends State<PastQuestionsScreen> {
             ),
             SizedBox(height: screenHeight * 0.04),
             SizedBox(
-              height: 80,
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () => Navigator.pop(context),
@@ -234,6 +237,8 @@ class _PastQuestionsScreenState extends State<PastQuestionsScreen> {
                   backgroundColor: Colors.purple.shade600,
                   foregroundColor: Colors.white,
                   elevation: 4,
+                  minimumSize: const Size.fromHeight(56),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -245,6 +250,9 @@ class _PastQuestionsScreenState extends State<PastQuestionsScreen> {
                     fontSize: baseTextSize * 1.1 * widget.accessibilityService.textSizeMultiplier,
                     fontWeight: FontWeight.bold,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                 ),
               ),
             ),
@@ -396,6 +404,8 @@ class _PastQuestionsScreenState extends State<PastQuestionsScreen> {
                         fontSize: baseTextSize * 0.8 * widget.accessibilityService.textSizeMultiplier,
                         color: Colors.purple.shade600,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       _selectedQuestion!.questionPreview,

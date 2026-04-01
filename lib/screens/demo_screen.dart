@@ -165,22 +165,29 @@ class _DemoScreenState extends State<DemoScreen> {
                           child: Text(
                             'Back',
                             style: TextStyle(
-                              fontSize: 16 * _accessibilityService.textSizeMultiplier,
+                              fontSize: (14 * _accessibilityService.textSizeMultiplier)
+                                  .clamp(14.0, 26.0),
                               color: Colors.blue.shade700,
                               fontWeight: FontWeight.w600,
                             ),
-                            overflow: TextOverflow.visible,
-                            softWrap: false,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            softWrap: true,
                           ),
                         ),
                       ),
                     ),
-                    Text(
-                      'Demo Mode',
-                      style: TextStyle(
-                        fontSize: 20 * _accessibilityService.textSizeMultiplier,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue.shade800,
+                    Flexible(
+                      child: Text(
+                        'Demo Mode',
+                        style: TextStyle(
+                          fontSize: 20 * _accessibilityService.textSizeMultiplier,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade800,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
                       ),
                     ),
                     const Expanded(child: SizedBox()),

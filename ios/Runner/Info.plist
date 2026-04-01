@@ -55,6 +55,51 @@
 			</array>
 		</dict>
 	</dict>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>App-prefs</string>
+		<string>prefs</string>
+		<string>contacts</string>
+		<string>addressbook</string>
+		<string>messages</string>
+		<string>imessage</string>
+		<string>sms</string>
+		<string>tel</string>
+		<string>telprompt</string>
+		<string>mobilephone</string>
+		<string>facetime</string>
+		<string>facetime-audio</string>
+		<string>facetime-prompt</string>
+		<string>message</string>
+		<string>mailto</string>
+		<string>photos-redirect</string>
+		<string>maps</string>
+		<string>map</string>
+		<string>calshow</string>
+		<string>x-apple-calevent</string>
+		<string>mobilenotes</string>
+		<string>x-apple-reminder</string>
+		<string>x-web-search</string>
+		<string>itms-apps</string>
+		<string>weather</string>
+		<string>applenews</string>
+		<string>applenewss</string>
+		<string>music</string>
+		<string>musics</string>
+		<string>audio-player-event</string>
+		<string>videos</string>
+		<string>podcasts</string>
+		<string>pcast</string>
+		<string>podcast</string>
+		<string>shareddocuments</string>
+		<string>voicememos</string>
+		<string>clock-alarm</string>
+		<string>shoebox</string>
+		<string>shortcuts</string>
+		<string>ibooks</string>
+		<string>itms-books</string>
+		<string>dict</string>
+	</array>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

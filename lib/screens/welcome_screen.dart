@@ -24,11 +24,16 @@ class WelcomeScreen extends StatelessWidget {
           ),
         ),
         child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
               // App icon with enhanced styling
               Container(
                 width: 140,
@@ -119,7 +124,7 @@ class WelcomeScreen extends StatelessWidget {
                 ),
               ),
               
-              const SizedBox(height: 50),
+              const SizedBox(height: 36),
               
               // Enhanced continue button
               Container(
@@ -144,7 +149,8 @@ class WelcomeScreen extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue.shade600,
                     foregroundColor: Colors.white,
-                    minimumSize: const Size(double.infinity, 65),
+                    minimumSize: const Size.fromHeight(65),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -157,12 +163,19 @@ class WelcomeScreen extends StatelessWidget {
                       fontSize: 22,
                       fontWeight: FontWeight.w600,
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
                   ),
                 ),
               ),
-            ],
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
-        ),
         ),
       ),
     );

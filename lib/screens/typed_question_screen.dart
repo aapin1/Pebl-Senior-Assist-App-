@@ -261,6 +261,7 @@ class _TypedQuestionScreenState extends State<TypedQuestionScreen> {
             appBar: AppBar(
               backgroundColor: Colors.transparent,
               elevation: 0,
+              leadingWidth: 92,
               leading: Container(
                 padding: const EdgeInsets.only(left: 8.0),
                 child: TextButton(
@@ -268,12 +269,14 @@ class _TypedQuestionScreenState extends State<TypedQuestionScreen> {
                   child: Text(
                     'Back',
                     style: TextStyle(
-                      fontSize: 18 * widget.accessibilityService.textSizeMultiplier,
+                      fontSize: (14 * widget.accessibilityService.textSizeMultiplier)
+                          .clamp(14.0, 26.0),
                       color: Colors.blue.shade700,
                       fontWeight: FontWeight.w600,
                     ),
-                    overflow: TextOverflow.visible,
-                    softWrap: false,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: true,
                   ),
                 ),
               ),
@@ -341,12 +344,13 @@ class _TypedQuestionScreenState extends State<TypedQuestionScreen> {
                                 const SizedBox(height: 16),
 
                                 // Text input area (replaces the mic button area)
-                                SizedBox(
-                                  height: 100,
+                                ConstrainedBox(
+                                  constraints: const BoxConstraints(minHeight: 100),
                                   child: Center(
                                     child: TextField(
                                       controller: _typedQuestionController,
-                                      maxLines: 3,
+                                      minLines: 2,
+                                      maxLines: 5,
                                       textInputAction: TextInputAction.newline,
                                       style: TextStyle(
                                         fontSize: 15 * widget.accessibilityService.textSizeMultiplier,
@@ -477,8 +481,10 @@ class _TypedQuestionScreenState extends State<TypedQuestionScreen> {
                                       style: TextStyle(
                                         fontSize: 14 * widget.accessibilityService.textSizeMultiplier,
                                       ),
-                                      overflow: TextOverflow.visible,
-                                      softWrap: false,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      softWrap: true,
+                                      textAlign: TextAlign.center,
                                     ),
                                     style: ButtonStyle(
                                       backgroundColor: WidgetStateProperty.resolveWith<Color>(
@@ -499,6 +505,9 @@ class _TypedQuestionScreenState extends State<TypedQuestionScreen> {
                                       ),
                                       padding: const WidgetStatePropertyAll(
                                         EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                                      ),
+                                      minimumSize: const WidgetStatePropertyAll(
+                                        Size.fromHeight(56),
                                       ),
                                       shape: WidgetStatePropertyAll(
                                         RoundedRectangleBorder(
@@ -544,7 +553,8 @@ class _TypedQuestionScreenState extends State<TypedQuestionScreen> {
                                     style: TextStyle(
                                       fontSize: 14 * widget.accessibilityService.textSizeMultiplier,
                                     ),
-                                    overflow: TextOverflow.visible,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                     softWrap: true,
                                     textAlign: TextAlign.center,
                                   ),
@@ -552,6 +562,7 @@ class _TypedQuestionScreenState extends State<TypedQuestionScreen> {
                                     backgroundColor: Colors.blue.shade600,
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                                    minimumSize: const Size.fromHeight(56),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
                                     ),

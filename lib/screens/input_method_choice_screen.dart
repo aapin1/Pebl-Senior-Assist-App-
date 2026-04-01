@@ -45,6 +45,7 @@ class InputMethodChoiceScreen extends StatelessWidget {
             appBar: AppBar(
               backgroundColor: Colors.transparent,
               elevation: 0,
+              leadingWidth: 92,
               leading: Container(
                 padding: const EdgeInsets.only(left: 8.0),
                 child: TextButton(
@@ -52,12 +53,14 @@ class InputMethodChoiceScreen extends StatelessWidget {
                   child: Text(
                     'Back',
                     style: TextStyle(
-                      fontSize: 18 * accessibilityService.textSizeMultiplier,
+                      fontSize: (14 * accessibilityService.textSizeMultiplier)
+                          .clamp(14.0, 26.0),
                       color: Colors.blue.shade700,
                       fontWeight: FontWeight.w600,
                     ),
-                    overflow: TextOverflow.visible,
-                    softWrap: false,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: true,
                   ),
                 ),
               ),

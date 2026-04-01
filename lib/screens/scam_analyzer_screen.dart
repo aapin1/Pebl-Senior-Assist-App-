@@ -174,6 +174,7 @@ class _ScamAnalyzerScreenState extends State<ScamAnalyzerScreen> {
             appBar: AppBar(
               backgroundColor: Colors.transparent,
               elevation: 0,
+              leadingWidth: 92,
               leading: Container(
                 padding: const EdgeInsets.only(left: 8.0),
                 child: TextButton(
@@ -181,12 +182,14 @@ class _ScamAnalyzerScreenState extends State<ScamAnalyzerScreen> {
                   child: Text(
                     'Back',
                     style: TextStyle(
-                      fontSize: 18 * widget.accessibilityService.textSizeMultiplier,
+                      fontSize: (14 * widget.accessibilityService.textSizeMultiplier)
+                          .clamp(14.0, 26.0),
                       color: Colors.blue.shade700,
                       fontWeight: FontWeight.w600,
                     ),
-                    overflow: TextOverflow.visible,
-                    softWrap: false,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: true,
                   ),
                 ),
               ),
@@ -246,7 +249,6 @@ class _ScamAnalyzerScreenState extends State<ScamAnalyzerScreen> {
                       // Check Another button
                       SizedBox(
                         width: double.infinity,
-                        height: screenHeight * 0.08,
                         child: ElevatedButton.icon(
                           onPressed: _analyzeAnother,
                           icon: Icon(Icons.refresh, size: screenHeight * 0.03),
@@ -256,10 +258,15 @@ class _ScamAnalyzerScreenState extends State<ScamAnalyzerScreen> {
                               fontSize: baseTextSize * 0.9 * widget.accessibilityService.textSizeMultiplier,
                               fontWeight: FontWeight.bold,
                             ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.orange.shade600,
                             foregroundColor: Colors.white,
+                            minimumSize: const Size.fromHeight(56),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
@@ -272,7 +279,6 @@ class _ScamAnalyzerScreenState extends State<ScamAnalyzerScreen> {
                       // Go Home button
                       SizedBox(
                         width: double.infinity,
-                        height: screenHeight * 0.08,
                         child: OutlinedButton.icon(
                           onPressed: () => _stopTtsAndNavigate(() {
                             Navigator.pushAndRemoveUntil(
@@ -288,10 +294,15 @@ class _ScamAnalyzerScreenState extends State<ScamAnalyzerScreen> {
                               fontSize: baseTextSize * 0.9 * widget.accessibilityService.textSizeMultiplier,
                               fontWeight: FontWeight.bold,
                             ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
                           ),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.blue.shade700,
                             side: BorderSide(color: Colors.blue.shade400, width: 2),
+                            minimumSize: const Size.fromHeight(56),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
